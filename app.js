@@ -1,0 +1,1111 @@
+/* ============================================================
+   SMB SITE — self-serve app engine (niche-agnostic)
+   Firebase (Auth + Firestore) · hydrate · inline WYSIWYG edit · bookings
+   Loaded as a module. Per-client config in client.config.js
+   (window.CLIENT); per-client content in content.js
+   (window.DEFAULT_CONTENT). This engine file NEVER changes per client.
+   ------------------------------------------------------------
+   Model: one Firestore doc  sites/{CLIENT.siteId}  holds ALL content.
+   Public reads it and hydrates the page. Owners (allowlisted emails) log in,
+   toggle Edit mode, click anything on the page to change it, and Save.
+   Photos are compressed client-side and stored as data URLs in the doc
+   (free — no Firebase Storage / billing needed).
+   ============================================================ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, addDoc, getDocs,
+  query, orderBy, where, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const SITE_ID = window.CLIENT.siteId;
+const OWNERS = window.CLIENT.owners;
+
+const app = initializeApp(window.CLIENT.firebase);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const siteRef = doc(db, "sites", SITE_ID);
+
+/* ------------------------------------------------------------
+   DEFAULT CONTENT — this is both the fallback AND the seed.
+   Every editable value on the page lives in window.DEFAULT_CONTENT
+   (content.js), loaded via its own <script> tag before this module.
+   Repeatable lists (packages, addons, gallery, reviews, cities) are arrays.
+   ------------------------------------------------------------ */
+const DEFAULT_CONTENT = window.DEFAULT_CONTENT;
+
+/* ---------- state ---------- */
+let content = null;        // live content object
+let editMode = false;
+let currentUser = null;
+let dirty = false;
+let docExists = false;     // did sites/{SITE_ID} exist at load? (drives owner auto-seed)
+let seeded = false;        // guard so auto-seed runs at most once per session
+
+/* text [data-field] elements that should be inline-editable (excludes images, links, and the nested logo) */
+const EDITABLE_FIELDS = ["hero.headline", "hero.em", "hero.sub", "hero.mark", "pricingLead", "workHeading", "area.lead", "story.over", "story.quote", "story.cite", "business.nameSub"];
+const editableSelector = () => "[data-edit],[data-ekey]," + EDITABLE_FIELDS.map(f => `[data-field="${f}"]`).join(",");
+
+/* ============================================================
+   LOAD + HYDRATE
+   ============================================================ */
+/* Is the Firebase config still the scaffold placeholder? A freshly-scaffolded
+   site (or a demo we show a prospect before provisioning) ships with
+   apiKey "REPLACE_ME". There is no project to read from, so there is no point
+   waiting on Firestore at all — the getDoc below would just burn the full 6s
+   timeout before falling back to DEFAULT_CONTENT. In that case we take the
+   fast path and paint immediately. A real-but-unreachable project (a real key
+   that just can't be reached right now) still gets the 6s race. */
+const FB_UNCONFIGURED = (() => {
+  const k = window.CLIENT && window.CLIENT.firebase && window.CLIENT.firebase.apiKey;
+  return !k || String(k).startsWith("REPLACE_ME");
+})();
+
+async function load() {
+  if (FB_UNCONFIGURED) {
+    // Demo mode — no provisioned backend. Hydrate instantly from DEFAULT_CONTENT
+    // (instant paint, no 6s Firestore wait). Owner tools stay off; bookings and
+    // inline editing light up once a real Firebase config is pasted in.
+    content = structuredClone(DEFAULT_CONTENT);
+    docExists = false;
+    hydrate();
+    mountOwnerBar();
+    maybeShowTrack();
+    const mb0 = document.getElementById("myBookingsLink");
+    if (mb0) mb0.onclick = (e) => { e.preventDefault(); openMyBookings(); };
+    return;
+  }
+  try {
+    // Race the read against a timeout: an unreachable/misconfigured Firebase
+    // project (e.g. the client offline) can leave getDoc pending FOREVER with no
+    // error. Without this guard the page would never hydrate and the quote tool
+    // would stay blank. The DEFAULT_CONTENT fallback must always paint.
+    const snap = await Promise.race([
+      getDoc(siteRef),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("firestore-timeout")), 6000))
+    ]);
+    docExists = snap.exists();
+    content = snap.exists() ? deepMerge(structuredClone(DEFAULT_CONTENT), snap.data()) : structuredClone(DEFAULT_CONTENT);
+  } catch (e) {
+    console.warn("Firestore read failed/timed out, using defaults:", e && e.message ? e.message : e);
+    content = structuredClone(DEFAULT_CONTENT);
+    docExists = false;
+  }
+  hydrate();
+  mountOwnerBar();
+  maybeShowTrack();
+  const mb = document.getElementById("myBookingsLink");
+  if (mb) mb.onclick = (e) => { e.preventDefault(); openMyBookings(); };
+}
+
+function deepMerge(base, over) {
+  for (const k in over) {
+    if (over[k] && typeof over[k] === "object" && !Array.isArray(over[k]) && typeof base[k] === "object" && !Array.isArray(base[k])) {
+      deepMerge(base[k], over[k]);
+    } else if (over[k] !== undefined) {
+      base[k] = over[k];
+    }
+  }
+  return base;
+}
+
+function setText(field, value) {
+  document.querySelectorAll(`[data-field="${field}"]`).forEach(el => { el.textContent = value; });
+}
+
+/* darken (amt<0) / lighten (amt>0) a hex color, preserving hue. Used to derive
+   --accent-deep (button hover) from the brand accent so it follows the client's
+   color. Darken multiplies toward black (keeps hue); lighten blends toward white. */
+function shade(hex, amt) {
+  const h = String(hex || "").replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(h)) return hex || "#2563EB";
+  const n = parseInt(h, 16);
+  const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+  const f = amt < 0 ? (1 + amt) : 1;                 // darken factor (multiply toward black)
+  const g = amt > 0 ? amt : 0;                        // lighten blend toward white
+  const ch = v => clamp(v * f + (255 - v) * g);
+  const r = ch(n >> 16), gg = ch((n >> 8) & 255), b = ch(n & 255);
+  return "#" + ((1 << 24) + (r << 16) + (gg << 8) + b).toString(16).slice(1);
+}
+
+/* keep <title>, meta description, Open Graph/Twitter tags, theme-color and
+   the JSON-LD business block in sync with the live content doc. The static
+   HTML carries pre-hydration placeholders; this overwrites them at runtime. */
+function syncSeo(c) {
+  const biz = c.business || {};
+  // full display name mirrors the logo (business.name + business.nameSub)
+  const bizName = [biz.name, biz.nameSub].filter(Boolean).join(" ") || document.title;
+  const title = (c.seo && c.seo.title) || bizName || document.title;
+  const desc = (c.seo && c.seo.desc) || "";
+  if (title) document.title = title;
+  const setMeta = (sel, val) => { if (val == null) return; const el = document.querySelector(sel); if (el) el.setAttribute("content", val); };
+  setMeta('meta[name="description"]', desc);
+  setMeta('meta[property="og:title"]', bizName);
+  setMeta('meta[property="og:description"]', desc);
+  setMeta('meta[name="twitter:title"]', bizName);
+  setMeta('meta[name="twitter:description"]', desc);
+  // JSON-LD business block
+  try {
+    const ld = document.getElementById("ldBiz");
+    if (ld) {
+      const data = JSON.parse(ld.textContent);
+      data.name = bizName;
+      if (desc) data.description = desc;
+      if (biz.phone) data.telephone = "+1" + String(biz.phone).replace(/\D/g, "");
+      if (biz.email) data.email = biz.email; else delete data.email;
+      const cities = (c.area && Array.isArray(c.area.cities)) ? c.area.cities.filter(Boolean) : [];
+      if (cities.length) data.areaServed = cities.map(n => ({ "@type": "City", name: n })); else delete data.areaServed;
+      const offers = (Array.isArray(c.packages) ? c.packages : []).filter(p => p && p.name);
+      if (offers.length) data.makesOffer = offers.map(p => ({ "@type": "Offer", name: p.name, price: String(p.price != null ? p.price : ""), priceCurrency: "USD" })); else delete data.makesOffer;
+      ld.textContent = JSON.stringify(data, null, 2);
+    }
+  } catch (e) { /* leave the static JSON-LD if anything's off */ }
+}
+
+/* map content → DOM (the index.html carries data-field hooks that match these) */
+function hydrate() {
+  const c = content;
+
+  // SEO — title, meta description, Open Graph / Twitter, and JSON-LD all
+  // resynced from the live content doc so post-launch edits propagate.
+  syncSeo(c);
+
+  // accent (+ derived darker hover shade, so buttons/hover follow the brand)
+  document.documentElement.style.setProperty("--accent", c.brand.accent);
+  document.documentElement.style.setProperty("--accent-deep", shade(c.brand.accent, -0.16));
+
+  // business identity
+  document.querySelectorAll('[data-field="business.name"]').forEach(el => el.childNodes[0] && (el.childNodes[0].textContent = c.business.name + " "));
+  setText("business.nameSub", c.business.nameSub);
+  document.querySelectorAll('[data-phone]').forEach(el => {
+    el.setAttribute("href", "tel:+1" + c.business.phone.replace(/\D/g, ""));
+    if (el.hasAttribute("data-phone-text")) el.textContent = "Call or Text " + c.business.phone;
+  });
+  setText("business.phonePlain", c.business.phone);
+  document.querySelectorAll('[data-email]').forEach(el => { el.setAttribute("href", "mailto:" + c.business.email); el.textContent = c.business.email; });
+
+  // hero
+  setText("hero.headline", c.hero.headline);
+  setText("hero.em", c.hero.em);
+  setText("hero.sub", c.hero.sub);
+  setText("hero.mark", c.hero.mark);
+  const heroImg = document.querySelector('[data-field="hero.photo"]');
+  if (heroImg) { heroImg.src = c.hero.photo; if (!heroImg.alt) heroImg.alt = (c.business && c.business.name) ? c.business.name + " — our work" : ""; }
+  applyHeroCrop();
+
+  setText("pricingLead", c.pricingLead);
+  setText("workHeading", c.workHeading);
+  setText("area.lead", c.area.lead);
+  // hours: render as a clean stacked schedule (split on " · ") so a long string doesn't orphan-wrap
+  document.querySelectorAll('[data-field="hours"]').forEach(el => { el.innerHTML = String(c.hours || "").split(" · ").map(esc).join("<br>"); });
+
+  // packages, addons, gallery, reviews, cities: rendered by dedicated renderers
+  renderPackages();
+  renderVehicles();
+  renderAddons();
+  renderTimeSlots();
+  renderGallery();
+  renderStory();
+  renderReviews();
+  renderCities();
+  applySectionVisibility();
+  renderSocial();
+  tagStaticText();
+  window.__CR_recomputeQuote && window.__CR_recomputeQuote();
+}
+
+/* ---- renderers (also used to re-render after edits) ---- */
+function renderPackages() {
+  const wrap = document.querySelector("#pkgTiers");
+  const strip = document.querySelector("#pkgCompare");
+  if (wrap) {
+    wrap.innerHTML = content.packages.map((p, pi) => `
+      <label class="tier cr-removable${p.featured ? " tier-feature" : ""}" data-pkg="${p.id}" data-remove="packages.${pi}">
+        <input type="radio" name="pkg" value="${p.id}" data-base="${p.price}" />
+        ${p.tag ? `<span class="tier-tag" data-edit="packages.${pi}.tag">${esc(p.tag)}</span>` : ""}
+        <span class="tier-head">
+          <span class="tier-name" data-edit="packages.${pi}.name">${esc(p.name)}</span>
+          <span class="tier-price">from <b>$<span data-edit="packages.${pi}.price">${p.price}</span></b></span>
+        </span>
+        <span class="tier-list">${p.list.map((li, i) => `<span data-edit="packages.${pi}.list.${i}">${esc(li)}</span>`).join("")}</span>
+      </label>`).join("");
+  }
+  if (strip) {
+    strip.innerHTML = content.packages.map(p => `
+      <div class="compare-col${p.featured ? " compare-col-featured" : ""}">
+        ${p.tag ? `<span class="compare-badge">${esc(p.tag)}</span>` : ""}
+        <p class="compare-name">${esc(p.name)}</p>
+        <p class="compare-price">From $${p.price}</p>
+      </div>`).join("");
+  }
+}
+function renderVehicles() {
+  const seg = document.querySelector("#vehSeg");
+  if (!seg) return;
+  seg.innerHTML = content.vehicles.map((v, i) => `
+    <label><input type="radio" name="veh" value="${v.id}" data-add="${v.add}" ${i === 0 ? "checked" : ""}/><span><span data-edit="vehicles.${i}.label">${esc(v.label)}</span>${v.add > 0 ? ` <b data-edit="vehicles.${i}.add">+$${v.add}</b>` : ""}</span></label>`).join("");
+}
+function renderTimeSlots() {
+  const seg = document.querySelector("#bkTime");
+  if (!seg) return;
+  const slots = (content.availability && content.availability.slots) || [];
+  seg.className = slots.length > 4 ? "seg seg-wrap" : "seg seg-" + Math.min(4, Math.max(1, slots.length));
+  seg.innerHTML = slots.map(s => `
+    <label><input type="radio" name="bktime" value="${esc(s)}" /><span>${esc(s)}</span></label>`).join("");
+}
+function renderAddons() {
+  const ex = document.querySelector("#addonList");
+  if (!ex) return;
+  ex.innerHTML = content.addons.map((a, ai) => `
+    <label class="ex cr-removable" data-remove="addons.${ai}"><input type="checkbox" name="ex" data-key="${a.id}" data-add="${a.add}" />
+      <span><span data-edit="addons.${ai}.label">${esc(a.label)}</span> <b data-price="+$${a.add}" data-edit="addons.${ai}.add">+$${a.add}</b></span></label>`).join("");
+}
+function renderGallery() {
+  const g = document.querySelector("#workGrid");
+  if (!g) return;
+  g.innerHTML = content.gallery.map((ph, i) => `
+    <figure class="cr-removable" data-gindex="${i}" data-remove="gallery.${i}"><img src="${esc(ph.src)}" alt="${esc(ph.cap || "")}" onerror="this.classList.add('img-broken');this.closest('figure').classList.add('img-missing')" onload="this.classList.remove('img-broken');this.closest('figure').classList.remove('img-missing')" />
+      <figcaption data-edit="gallery.${i}.cap">${esc(ph.cap || "")}</figcaption></figure>`).join("");
+  window.__CR_bindLightbox && window.__CR_bindLightbox();
+}
+function renderStory() {
+  setText("story.over", content.story.over);
+  setText("story.quote", content.story.quote);
+  setText("story.cite", content.story.cite);
+}
+function renderReviews() {
+  const r = document.querySelector("#reviewList");
+  if (!r) return;
+  r.innerHTML = content.reviews.map((rv, i) => `
+    <blockquote class="rev-card cr-removable" data-remove="reviews.${i}"><p data-edit="reviews.${i}.text">${esc(rv.text)}</p>
+      <footer>— <span data-edit="reviews.${i}.name">${esc(rv.name)}</span>${rv.source ? ` · ${esc(rv.source)}` : ""}</footer></blockquote>`).join("");
+}
+function renderCities() {
+  const ul = document.querySelector("#areaCities");
+  if (!ul) return;
+  ul.innerHTML = content.area.cities.map((c, i) => `<li class="cr-removable" data-remove="area.cities.${i}" data-edit="area.cities.${i}">${esc(c)}</li>`).join("");
+}
+function safeUrl(u) {
+  try { const x = new URL(u, location.href); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : ""; }
+  catch { return ""; }
+}
+function renderSocial() {
+  const box = document.querySelector("#socialLinks");
+  if (box) {
+    box.textContent = "";                         // clear without innerHTML sink
+    const s = content.social;
+    const add = (url, label) => {
+      const u = safeUrl(url); if (!u) return;      // protocol allowlist blocks javascript: etc.
+      const a = document.createElement("a");
+      a.href = u; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = label;
+      box.appendChild(a);
+    };
+    if (s.ig) { const ig = String(s.ig).trim(); add(/^https?:\/\//i.test(ig) ? ig : "https://instagram.com/" + ig.replace(/^@/, "").replace(/[^A-Za-z0-9_.]/g, ""), "Instagram"); }
+    if (s.fb) add(s.fb, "Facebook");
+    if (s.yelp) add(s.yelp, "Yelp");
+    if (s.nextdoor) add(s.nextdoor, "Nextdoor");
+  }
+  // IG feed section is not implemented (no free profile-feed embed) — keep it hidden; the Instagram link above is the real IG entry point
+  const feed = document.querySelector("#igFeed");
+  if (feed) feed.hidden = true;
+}
+function applySectionVisibility() {
+  const map = { pricing: "#pricing", work: "#work", story: "#story", reviews: "#reviewsSection", area: "#area" };
+  for (const key in map) {
+    const el = document.querySelector(map[key]);
+    if (el) el.hidden = !content.sections[key];
+  }
+  // header nav links follow their section — hide the link if the page it jumps to is turned off
+  const navMap = { "#pricing": "pricing", "#work": "work", "#story": "story" };
+  document.querySelectorAll(".nav-links a").forEach(a => {
+    const key = navMap[a.getAttribute("href") || ""];
+    if (key) a.style.display = content.sections[key] ? "" : "none";
+  });
+}
+
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ============================================================
+   BOOKINGS  (public create → Firestore + optional EmailJS)
+   ============================================================ */
+export async function submitBooking(payload) {
+  const record = { ...payload, site: SITE_ID, status: "new", created: serverTimestamp() };
+  let id = null;
+  try {
+    const ref = await addDoc(collection(db, "sites", SITE_ID, "bookings"), record);
+    id = ref.id;
+  } catch (e) { console.warn("Booking save failed:", e); }
+  // optional email via EmailJS if configured
+  const ej = content?.booking?.emailjs;
+  if (ej && ej.serviceId && ej.templateId && ej.publicKey && window.emailjs) {
+    try {
+      const title = "New booking — " + (payload.name || "");
+      const message = [
+        (payload.name || "") + (payload.phone ? " · " + payload.phone : ""),
+        payload.email ? "Email: " + payload.email : "",
+        (payload.package || "") + (payload.vehicle ? " · " + payload.vehicle : "") + (payload.estimate ? " — " + payload.estimate : ""),
+        payload.addons ? "Add-ons: " + payload.addons : "",
+        payload.date ? "Date: " + payload.date + " " + (payload.time || "") : (payload.time ? "Time: " + payload.time : ""),
+        payload.address ? "Where: " + payload.address : "",
+        payload.notes ? "Notes: " + payload.notes : ""
+      ].filter(Boolean).join("\n");
+      await window.emailjs.send(ej.serviceId, ej.templateId,
+        { to_email: content.booking.notifyEmail, name: payload.name || "", email: payload.email || "", title: title, message: message },
+        { publicKey: ej.publicKey });
+    } catch (e) { console.warn("EmailJS failed:", e); }
+  }
+  return id;
+}
+window.__CR_submitBooking = submitBooking;
+
+/* ---- availability: date limits + per-date slot status (pure, reads content.availability) ---- */
+function ymd(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function availCfg() {
+  const a = (content && content.availability) || {};
+  return {
+    slots: a.slots || [],
+    openDays: a.openDays || [true, true, true, true, true, true, true],
+    vacations: a.vacations || [],
+    blocked: a.blocked || [],
+    leadDays: Number(a.leadDays) || 0,
+    horizonDays: Number(a.horizonDays) || 60
+  };
+}
+function dateLimits() {
+  const a = availCfg();
+  const min = new Date(); min.setHours(0, 0, 0, 0); min.setDate(min.getDate() + a.leadDays);
+  const max = new Date(); max.setHours(0, 0, 0, 0); max.setDate(max.getDate() + a.horizonDays);
+  return { min: ymd(min), max: ymd(max) };
+}
+function dayStatus(dateStr) {
+  const a = availCfg();
+  if (!dateStr) return { open: true, reason: "" };
+  const lim = dateLimits();
+  if (dateStr < lim.min) return { open: false, reason: "That date has passed — pick an upcoming day." };
+  if (dateStr > lim.max) return { open: false, reason: "That's further out than we book right now." };
+  const dow = new Date(dateStr + "T00:00:00").getDay();
+  if (!a.openDays[dow]) return { open: false, reason: "We're closed that day — please pick another." };
+  const vac = a.vacations.find(v => v && v.start && v.end && dateStr >= v.start && dateStr <= v.end);
+  if (vac) return { open: false, reason: (vac.label ? vac.label + " — " : "") + "we're out that day. Pick another date." };
+  return { open: true, reason: "" };
+}
+function slotIsBlocked(dateStr, slot) {
+  const a = availCfg();
+  return a.blocked.some(b => b && b.date === dateStr && (!b.slot || b.slot === slot));
+}
+// public bridge: what can this customer book on this date?
+window.__CR_bookingAvail = function (dateStr) {
+  const a = availCfg();
+  const st = dayStatus(dateStr);
+  const slots = a.slots.map(s => ({ label: s, available: st.open && !slotIsBlocked(dateStr, s) }));
+  let open = st.open, reason = st.reason;
+  // if the day is technically open but every slot is taken, treat it as fully booked
+  if (open && dateStr && slots.length && slots.every(s => !s.available)) {
+    open = false; reason = "That day's fully booked — please pick another.";
+  }
+  return { open, reason, slots };
+};
+window.__CR_dateLimits = dateLimits;
+
+/* ---- track-your-booking: capability link ?track=<id> (unguessable id = access) ---- */
+async function maybeShowTrack() {
+  const m = /[?&]track=([A-Za-z0-9_-]+)/.exec(location.search);
+  if (!m) return;
+  try {
+    const snap = await getDoc(doc(db, "sites", SITE_ID, "bookings", m[1]));
+    if (!snap.exists()) return;
+    const b = snap.data();
+    const d = drawer("Your booking", "");
+    const body = d.querySelector(".crd-body");
+    const row = (k, v) => { if (!v) return; const p = document.createElement("div"); p.className = "trk-row"; const a = document.createElement("b"); a.textContent = k; const s = document.createElement("span"); s.textContent = v; p.append(a, s); body.appendChild(p); };
+    const status = document.createElement("div"); status.className = "trk-status trk-" + (b.status || "new"); status.textContent = ({ new: "Requested — we'll confirm shortly", confirmed: "Confirmed", done: "Completed" })[b.status || "new"]; body.appendChild(status);
+    row("Name", b.name); row("Package", b.package); row("Vehicle", b.vehicle);
+    row("Estimate", b.estimate); row("Date", b.date); row("Time", b.time); row("Where", b.address); row("Notes", b.notes);
+    const call = document.createElement("a"); call.className = "crbtn crbtn-primary"; call.href = "tel:+1" + (content?.business?.phone || "").replace(/\D/g, ""); call.textContent = "Call us"; body.appendChild(call);
+  } catch (e) { console.warn("track failed", e); }
+}
+
+/* ---- customer accounts: "My bookings" via Google sign-in (sees only their own) ---- */
+async function openMyBookings() {
+  let user = auth.currentUser;
+  if (!user) {
+    try { const res = await signInWithPopup(auth, new GoogleAuthProvider()); user = res.user; }
+    catch (e) { return; }  // cancelled / popup blocked
+  }
+  const d = drawer("My bookings", `<div id="myBk">Loading…</div>`);
+  const list = d.querySelector("#myBk");
+  try {
+    const snap = await getDocs(query(collection(db, "sites", SITE_ID, "bookings"), where("email", "==", user.email)));
+    list.textContent = "";
+    const who = document.createElement("p"); who.className = "hint"; who.style.cssText = "color:#9aa;font-size:.8rem;margin:0 0 12px"; who.textContent = "Signed in as " + user.email; list.appendChild(who);
+    if (snap.empty) { const e = document.createElement("div"); e.textContent = "No bookings yet under this email. Book a detail and it'll show up here."; list.appendChild(e); }
+    else {
+      const rows = []; snap.forEach(s => rows.push(s.data()));
+      rows.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      rows.forEach(b => {
+        const card = document.createElement("div"); card.className = "bk-card";
+        const st = document.createElement("span"); st.className = "bk-badge bk-" + (b.status || "new");
+        st.textContent = ({ new: "Requested", confirmed: "Confirmed", done: "Done" })[b.status || "new"]; card.appendChild(st);
+        const line = (k, v) => { if (!v) return; const p = document.createElement("div"); const a = document.createElement("b"); a.textContent = k + ": "; const s = document.createElement("span"); s.textContent = v; p.append(a, s); card.appendChild(p); };
+        line("Package", b.package); line("Vehicle", b.vehicle); line("Estimate", b.estimate);
+        line("Date", b.date); line("Time", b.time); line("Where", b.address); line("Notes", b.notes);
+        list.appendChild(card);
+      });
+    }
+    const out = document.createElement("button"); out.className = "crbtn"; out.style.marginTop = "12px"; out.textContent = "Sign out";
+    out.onclick = () => { signOut(auth).then(() => d.remove()); }; list.appendChild(out);
+  } catch (e) { list.textContent = "Couldn't load your bookings: " + (e.code || e.message); }
+}
+window.__CR_myBookings = openMyBookings;
+
+/* ============================================================
+   OWNER BAR + AUTH
+   ============================================================ */
+function mountOwnerBar() {
+  if (document.getElementById("crOwnerBar")) return;
+  const bar = document.createElement("div");
+  bar.id = "crOwnerBar";
+  bar.innerHTML = `
+    <div id="crOwnerTools">
+      <span id="crWho">Editing site</span>
+      <button id="crReframeBtn">Reframe hero</button>
+      <button id="crPhotosBtn">Photos</button>
+      <button id="crSaveBtn">Save</button>
+      <button id="crDone">Done</button>
+    </div>`;
+  document.body.appendChild(bar);
+  injectOwnerStyles();
+  bar.style.display = "none";                       // nothing floats during normal browsing
+
+  document.getElementById("crReframeBtn").onclick = openHeroEditor;
+  document.getElementById("crPhotosBtn").onclick = openGalleryManager;
+  document.getElementById("crSaveBtn").onclick = saveContent;
+  document.getElementById("crDone").onclick = () => { window.location.href = "./admin.html"; };
+
+  // Edit mode is entered ONLY via the dashboard's "Edit site" (opens ?edit=1). No public sign-in button.
+  const wantEdit = /(?:[?&])edit\b/i.test(location.search);
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user && OWNERS.includes(user.email) ? user : null;
+    if (currentUser) maybeSeed();   // first owner visit writes the seed doc — no manual "save once" step
+    if (wantEdit && currentUser) {
+      bar.style.display = "block";
+      if (!editMode) toggleEdit();
+    } else if (wantEdit && !currentUser) {
+      window.location.replace("./admin.html");        // must sign in on the dashboard
+    } else {
+      bar.style.display = "none";
+      if (editMode) toggleEdit();
+    }
+  });
+}
+
+/* ---- auto-seed: on the first owner visit, if sites/{SITE_ID} doesn't
+   exist yet, write DEFAULT_CONTENT so there's no manual "save once" step.
+   Guarded to signed-in owners (currentUser is owner-only) and to the
+   missing-doc case, and runs at most once per session. ---- */
+async function maybeSeed() {
+  if (seeded || docExists || !currentUser) return;
+  seeded = true;                 // set before the await so re-fires don't double-write
+  try {
+    const fresh = await getDoc(siteRef);   // re-check: another owner/tab may have seeded already
+    if (fresh.exists()) { docExists = true; return; }
+    await setDoc(siteRef, structuredClone(DEFAULT_CONTENT), { merge: false });
+    docExists = true;
+  } catch (e) {
+    console.warn("Auto-seed failed (will retry next owner load):", e);
+    seeded = false;              // allow a retry on the next auth event / reload
+  }
+}
+
+function openLogin() {
+  const d = drawer("Owner sign in", `
+    <label class="crf">Email <input id="loginEmail" type="email" autocomplete="username"></label>
+    <label class="crf">Password <input id="loginPw" type="password" autocomplete="current-password"></label>
+    <p class="crf" id="loginMsg" style="min-height:1.1em;margin:0 0 6px"></p>
+    <button id="loginGo" class="crbtn crbtn-primary">Sign in</button>
+    <button id="loginSet" class="crbtn" style="width:100%">First time or forgot? Email me a set-password link</button>
+  `);
+  const emailEl = d.querySelector("#loginEmail");
+  const msg = (t, ok) => { const m = d.querySelector("#loginMsg"); m.textContent = t; m.style.color = ok ? "#7fd47f" : "#f08a8a"; };
+  d.querySelector("#loginGo").onclick = () => {
+    msg("Signing in…");
+    signInWithEmailAndPassword(auth, emailEl.value.trim(), d.querySelector("#loginPw").value)
+      .then(() => d.remove())
+      .catch(e => msg("Sign in failed (" + e.code + ")."));
+  };
+  d.querySelector("#loginSet").onclick = () => {
+    const em = emailEl.value.trim();
+    if (!em) return msg("Enter your email first.");
+    sendPasswordResetEmail(auth, em)
+      .then(() => msg("Sent — check " + em + " for a link to set your password.", true))
+      .catch(e => msg("Couldn't send (" + e.code + ")."));
+  };
+}
+
+/* ============================================================
+   EDIT MODE  (inline WYSIWYG)
+   ============================================================ */
+function toggleEdit() {
+  editMode = !editMode;
+  document.body.classList.toggle("cr-editing", editMode);
+  document.querySelectorAll(editableSelector()).forEach(el => {
+    el.contentEditable = editMode ? "true" : "false";
+    if (editMode) el.addEventListener("input", markDirty); else el.removeEventListener("input", markDirty);
+  });
+  if (editMode) { enableStructuralControls(); decorateRemovers(); showEditHint(); }
+  else { disableStructuralControls(); removeRemovers(); hideEditHint(); }
+  document.querySelectorAll("#workGrid figure img").forEach(img => {
+    img.style.cursor = editMode ? "pointer" : "";
+    img.onclick = editMode ? () => replacePhoto(img) : null;
+  });
+  // managed fields (edited in the dashboard, not inline): tapping them explains where to change them
+  document.querySelectorAll('[data-field="hours"],[data-phone],[data-email],[data-field="business.name"]').forEach(el => {
+    el.onclick = editMode ? (e) => { e.preventDefault(); showManagedHint(); } : null;
+  });
+  if (!editMode) { const p = document.getElementById("crHeroEd"); if (p) p.remove(); const mh = document.getElementById("crManageHint"); if (mh) mh.remove(); }
+}
+
+/* ---- remove (×) buttons on repeatable items ---- */
+function decorateRemovers() {
+  document.querySelectorAll("[data-remove]").forEach(item => {
+    if (item.querySelector(":scope > .cr-remove")) return;
+    const btn = document.createElement("button");
+    btn.className = "cr-remove"; btn.type = "button"; btn.title = "Remove";
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="11" height="11"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+    btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.dataset.remove); };
+    item.appendChild(btn);
+  });
+}
+function removeRemovers() { document.querySelectorAll(".cr-remove").forEach(b => b.remove()); }
+function removeItem(path) {
+  const parts = path.split("."); const idx = +parts.pop();
+  let arr = content; parts.forEach(k => { arr = arr ? arr[k] : arr; });
+  if (Array.isArray(arr) && idx >= 0) arr.splice(idx, 1);
+  markDirty();
+  if (path.startsWith("packages")) renderPackages();
+  else if (path.startsWith("addons")) renderAddons();
+  else if (path.startsWith("gallery")) renderGallery();
+  else if (path.startsWith("reviews")) renderReviews();
+  else if (path.startsWith("area.cities")) renderCities();
+  reEnter();
+}
+
+/* ---- edit hint banner ---- */
+function showEditHint() {
+  if (document.getElementById("crEditHint")) return;
+  const h = document.createElement("div"); h.id = "crEditHint"; h.className = "cr-edit-hint";
+  h.textContent = "Tap any text, price or photo to change it";
+  document.body.appendChild(h);
+  setTimeout(() => { h.style.transition = "opacity .5s"; h.style.opacity = "0"; setTimeout(() => h.remove(), 600); }, 3500);
+}
+function hideEditHint() { const h = document.getElementById("crEditHint"); if (h) h.remove(); }
+
+/* ---- make every static text element editable (keyed overrides) ---- */
+function tagStaticText() {
+  content.textOverrides = content.textOverrides || {};
+  const dyn = ["pkgTiers", "pkgCompare", "addonList", "vehSeg", "workGrid", "reviewList", "areaCities", "socialLinks", "crOwnerBar", "crDrawer", "est", "estNote", "priceLive", "sumLines", "bkSummary", "bkDoneNote", "confirmBody", "thumbs", "map", "igFeedMount"];
+  const inDyn = (el) => { let n = el; while (n) { if (n.id && dyn.includes(n.id)) return true; n = n.parentElement; } return false; };
+  const sel = "h1,h2,h3,h4,p,li,cite,em,a,button,.over,.build-label,.est-label,.est-fine,.price-note,.foot-h,.foot-note,.tier-name";
+  let n = 0;
+  document.querySelectorAll(sel).forEach(el => {
+    if (el.hasAttribute("data-field") || el.hasAttribute("data-edit") || el.hasAttribute("data-ekey")) return;
+    if (el.hasAttribute("data-phone") || el.hasAttribute("data-email") || el.getAttribute("aria-hidden") === "true") return;
+    if (el.closest("[data-field],[data-edit],#bk,#lb,#crOwnerBar,#crDrawer,#crHeroEd")) return;
+    if (inDyn(el)) return;
+    const hasDirectText = [...el.childNodes].some(c => c.nodeType === 3 && c.textContent.trim());
+    if (!hasDirectText) return;
+    const key = "e" + (n++);
+    el.setAttribute("data-ekey", key);
+    if (content.textOverrides[key] != null) el.textContent = content.textOverrides[key];
+  });
+}
+function markDirty() { dirty = true; }
+function showManagedHint() {
+  const old = document.getElementById("crManageHint"); if (old) old.remove();
+  const h = document.createElement("div"); h.id = "crManageHint"; h.className = "cr-manage-hint";
+  h.textContent = "Change this in your dashboard → Settings";
+  document.body.appendChild(h);
+  setTimeout(() => { h.style.transition = "opacity .4s"; h.style.opacity = "0"; setTimeout(() => h.remove(), 500); }, 2600);
+}
+function focusLast(sel) {
+  const els = document.querySelectorAll(sel); const el = els[els.length - 1];
+  if (!el) return;
+  el.focus();
+  try { const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) {}
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+function enableStructuralControls() {
+  // add/remove buttons for packages, addons, gallery, reviews, cities
+  addAdder("#pkgTiers", "Add package", () => { content.packages.push({ id: "p" + Date.now(), name: "New package", price: 100, list: ["Feature"] }); renderPackages(); reEnter(); });
+  addAdder("#addonList", "Add add-on", () => { content.addons.push({ id: "a" + Date.now(), label: "New add-on", add: 25 }); renderAddons(); reEnter(); });
+  addAdder("#workGrid", "Add photo", () => addPhoto());
+  addAdder("#reviewList", "Add review", () => { content.reviews.push({ name: "Customer", text: "Great work!", source: "" }); renderReviews(); reEnter(); });
+  addAdder("#areaCities", "Add city", () => { content.area.cities.push("New city"); renderCities(); reEnter(); focusLast("#areaCities li"); });
+}
+function reEnter() { // re-apply edit affordances after a re-render
+  if (!editMode) return;
+  document.querySelectorAll(editableSelector()).forEach(el => { el.contentEditable = "true"; el.addEventListener("input", markDirty); });
+  enableStructuralControls();
+  decorateRemovers();
+  markDirty();
+}
+function addAdder(sel, label, fn) {
+  const host = document.querySelector(sel);
+  if (!host || host.parentNode.querySelector(".cr-adder")) return;
+  const b = document.createElement("button");
+  b.className = "cr-adder";
+  b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14"><path d="M12 5v14M5 12h14"/></svg><span></span>`;
+  b.querySelector("span").textContent = label;
+  b.onclick = fn;
+  host.parentNode.insertBefore(b, host.nextSibling);
+}
+function disableStructuralControls() { document.querySelectorAll(".cr-adder").forEach(b => b.remove()); }
+
+/* ---- photo replace / add with client-side compression → data URL ---- */
+function pickImage() {
+  return new Promise(resolve => {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = () => resolve(inp.files[0]);
+    inp.click();
+  });
+}
+async function compress(file, maxW = 1100, quality = 0.72) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  const scale = Math.min(1, maxW / img.width);
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+  cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+  URL.revokeObjectURL(img.src);
+  return cv.toDataURL("image/jpeg", quality);
+}
+function applyHeroCrop() {
+  const heroImg = document.querySelector('[data-field="hero.photo"]');
+  if (!heroImg) return;
+  const h = content.hero || {};
+  const x = h.photoPosX == null ? 60 : h.photoPosX, y = h.photoPosY == null ? 50 : h.photoPosY, z = h.photoZoom == null ? 100 : h.photoZoom;
+  heroImg.style.objectPosition = x + "% " + y + "%";
+  heroImg.style.transformOrigin = x + "% " + y + "%";
+  heroImg.style.transform = z > 100 ? "scale(" + (z / 100) + ")" : "";
+}
+
+/* ---- hero reframe (crop) tool — sliders for pan + zoom, live preview ---- */
+function openHeroEditor() {
+  if (document.getElementById("crHeroEd")) return;
+  const h = content.hero;
+  if (h.photoPosX == null) h.photoPosX = 60;
+  if (h.photoPosY == null) h.photoPosY = 50;
+  if (h.photoZoom == null) h.photoZoom = 100;
+  const panel = document.createElement("div");
+  panel.id = "crHeroEd";
+  panel.innerHTML = `
+    <div class="crhe-title">Reframe hero photo</div>
+    <label>Left ↔ right <input type="range" id="crheX" min="0" max="100" value="${h.photoPosX}"></label>
+    <label>Up ↕ down <input type="range" id="crheY" min="0" max="100" value="${h.photoPosY}"></label>
+    <label>Zoom <input type="range" id="crheZ" min="100" max="200" value="${h.photoZoom}"></label>
+    <div class="crhe-row">
+      <button id="crheReplace" class="crbtn">Replace photo</button>
+      <button id="crheReset" class="crbtn">Reset</button>
+      <button id="crheDone" class="crbtn crbtn-primary">Done</button>
+    </div>`;
+  document.body.appendChild(panel);
+  const bind = (id, key) => { const el = panel.querySelector("#" + id); el.oninput = () => { content.hero[key] = +el.value; applyHeroCrop(); markDirty(); }; };
+  bind("crheX", "photoPosX"); bind("crheY", "photoPosY"); bind("crheZ", "photoZoom");
+  panel.querySelector("#crheReplace").onclick = () => { const img = document.querySelector('[data-field="hero.photo"]'); replacePhoto(img); };
+  panel.querySelector("#crheReset").onclick = () => { content.hero.photoPosX = 50; content.hero.photoPosY = 50; content.hero.photoZoom = 100; panel.querySelector("#crheX").value = 50; panel.querySelector("#crheY").value = 50; panel.querySelector("#crheZ").value = 100; applyHeroCrop(); markDirty(); };
+  panel.querySelector("#crheDone").onclick = () => panel.remove();
+}
+
+/* ---- full-screen gallery manager (mobile-friendly: add / replace / remove / caption) ---- */
+function openGalleryManager() {
+  if (document.getElementById("crGal")) return;
+  const panel = document.createElement("div");
+  panel.id = "crGal";
+  panel.innerHTML = `<div class="crgal-head"><b>Manage photos</b><button id="crGalDone" class="crbtn crbtn-primary">Done</button></div><div id="crGalList"></div><button id="crGalAdd" class="crbtn crgal-add">Add a photo</button>`;
+  document.body.appendChild(panel);
+  const list = panel.querySelector("#crGalList");
+  const render = () => {
+    list.innerHTML = content.gallery.map((ph, i) => `
+      <div class="crgal-row">
+        <img src="${esc(ph.src)}" alt="">
+        <input class="crgal-cap" data-i="${i}" value="${esc(ph.cap || "")}" placeholder="Caption (optional)">
+        <div class="crgal-btns"><button class="crbtn" data-rep="${i}">Replace</button><button class="crbtn crbtn-danger" data-del="${i}">Remove</button></div>
+      </div>`).join("") || `<p style="color:#9aa;padding:20px 0">No photos yet — add one below.</p>`;
+    list.querySelectorAll(".crgal-cap").forEach(inp => inp.oninput = () => { content.gallery[+inp.dataset.i].cap = inp.value; markDirty(); });
+    list.querySelectorAll("[data-rep]").forEach(b => b.onclick = async () => { const f = await pickImage(); if (!f) return; content.gallery[+b.dataset.rep].src = await compress(f); renderGallery(); markDirty(); render(); });
+    list.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { content.gallery.splice(+b.dataset.del, 1); renderGallery(); markDirty(); render(); });
+  };
+  render();
+  panel.querySelector("#crGalAdd").onclick = async () => { const f = await pickImage(); if (!f) return; content.gallery.push({ src: await compress(f), cap: "" }); renderGallery(); markDirty(); render(); };
+  panel.querySelector("#crGalDone").onclick = () => { panel.remove(); renderGallery(); if (editMode) reEnter(); };
+}
+
+async function replacePhoto(img) {
+  const f = await pickImage(); if (!f) return;
+  const data = await compress(f);
+  img.src = data;
+  const fig = img.closest("figure");
+  if (fig && fig.dataset.gindex != null) content.gallery[+fig.dataset.gindex].src = data;
+  else content.hero.photo = data;
+  markDirty();
+}
+async function addPhoto() {
+  const f = await pickImage(); if (!f) return;
+  const data = await compress(f);
+  content.gallery.push({ src: data, cap: "New photo" });
+  renderGallery(); reEnter();
+}
+
+/* ---- collect edits back into content, then save ---- */
+function collectEdits() {
+  document.querySelectorAll("[data-edit]").forEach(el => {
+    const path = el.dataset.edit.split(".");
+    const val = el.textContent.trim();
+    setByPath(content, path, val);
+  });
+  content.textOverrides = content.textOverrides || {};
+  document.querySelectorAll("[data-ekey]").forEach(el => { content.textOverrides[el.dataset.ekey] = el.textContent.trim(); });
+  // simple [data-field] text fields (hero, story, etc.) mirror to content too
+  const fieldMap = {
+    "hero.headline": ["hero", "headline"], "hero.em": ["hero", "em"], "hero.sub": ["hero", "sub"], "hero.mark": ["hero", "mark"],
+    "pricingLead": ["pricingLead"], "workHeading": ["workHeading"], "area.lead": ["area", "lead"],
+    "story.over": ["story", "over"], "story.quote": ["story", "quote"], "story.cite": ["story", "cite"], "business.nameSub": ["business", "nameSub"]
+  };
+  for (const f in fieldMap) {
+    const el = document.querySelector(`[data-field="${f}"]`);
+    if (el) setByPath(content, fieldMap[f], el.textContent.trim());
+  }
+}
+function setByPath(obj, path, val) {
+  let o = obj;
+  for (let i = 0; i < path.length - 1; i++) {
+    const k = /^\d+$/.test(path[i]) ? +path[i] : path[i];
+    o = o[k];
+    if (o == null) return;
+  }
+  let last = path[path.length - 1];
+  if (/^\d+$/.test(last)) last = +last;
+  if (typeof o[last] === "number") val = parseFloat(String(val).replace(/[^0-9.]/g, "")) || 0;
+  o[last] = val;
+}
+
+async function saveContent() {
+  if (!currentUser) return alert("Sign in first.");
+  collectEdits();
+  if (docSizeKB() > 950) return alert("This page is near the 1 MB storage limit (mostly photos). Remove a photo or two before saving, then try again.");
+  const btn = document.getElementById("crSaveBtn");
+  btn.textContent = "Saving…"; btn.disabled = true;
+  try {
+    // Preserve fields the admin dashboard owns (availability, booking settings) in case they
+    // were changed after this page loaded — the inline editor never edits them, so keep the freshest copy.
+    try {
+      const fresh = await getDoc(siteRef);
+      if (fresh.exists()) {
+        const fd = fresh.data();
+        if (fd.availability) content.availability = fd.availability;
+        if (fd.booking) content.booking = deepMerge(content.booking || {}, fd.booking);
+      }
+    } catch (e) { /* offline / read blocked — fall through and save what we have */ }
+    await setDoc(siteRef, content, { merge: false });
+    dirty = false;
+    btn.textContent = "Saved";
+    setTimeout(() => { btn.textContent = "Save"; btn.disabled = false; }, 1500);
+    window.__CR_recomputeQuote && window.__CR_recomputeQuote();
+  } catch (e) {
+    btn.textContent = "Save"; btn.disabled = false;
+    alert("Save failed: " + e.code + "\n" + e.message);
+  }
+}
+
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+/* ============================================================
+   SETTINGS DRAWER  +  BOOKINGS  (built next pass — stubs wired)
+   ============================================================ */
+function docSizeKB() { return Math.round(new Blob([JSON.stringify(content)]).size / 1024); }
+
+function drawer(title, bodyHtml) {
+  let d = document.getElementById("crDrawer");
+  if (d) d.remove();
+  d = document.createElement("div");
+  d.id = "crDrawer";
+  d.innerHTML = `<div class="crd-scrim"></div><div class="crd-panel"><div class="crd-head"><h3></h3><button class="crd-x" aria-label="Close">&times;</button></div><div class="crd-body"></div></div>`;
+  d.querySelector("h3").textContent = title;
+  d.querySelector(".crd-body").innerHTML = bodyHtml;   // owner-only content, values set via .value below
+  document.body.appendChild(d);
+  const close = () => d.remove();
+  d.querySelector(".crd-x").onclick = close;
+  d.querySelector(".crd-scrim").onclick = close;
+  return d;
+}
+
+function openSettings() {
+  if (!currentUser) return;
+  const s = content.social, b = content.booking, sec = content.sections;
+  const kb = docSizeKB();
+  const pct = Math.min(100, Math.round(kb / 1024 * 100));
+  const d = drawer("Settings", `
+    <label class="crf">Instagram handle <input id="setIg" placeholder="@yourhandle"></label>
+    <label class="crf crf-row"><span>Show Instagram feed on the site</span><input id="setIgFeed" type="checkbox"></label>
+    <label class="crf">Facebook URL <input id="setFb"></label>
+    <label class="crf">Yelp URL <input id="setYelp"></label>
+    <label class="crf">Nextdoor URL <input id="setNd"></label>
+    <hr>
+    <label class="crf">Hours <input id="setHours"></label>
+    <label class="crf">Where booking emails go <input id="setNotify"></label>
+    <label class="crf">Accent color <input id="setAccent" type="color"></label>
+    <hr>
+    <div class="crf"><b>Show / hide sections</b>
+      <label class="crf-row"><span>Pricing</span><input data-sec="pricing" type="checkbox"></label>
+      <label class="crf-row"><span>Our work</span><input data-sec="work" type="checkbox"></label>
+      <label class="crf-row"><span>Story</span><input data-sec="story" type="checkbox"></label>
+      <label class="crf-row"><span>Reviews</span><input data-sec="reviews" type="checkbox"></label>
+      <label class="crf-row"><span>Service area</span><input data-sec="area" type="checkbox"></label>
+      <label class="crf-row"><span>Instagram feed</span><input data-sec="igfeed" type="checkbox"></label>
+    </div>
+    <hr>
+    <div class="crf"><b>Page storage</b><div class="crmeter"><span style="width:${pct}%"></span></div>
+      <small>${kb} KB of 1024 KB used (photos live here — keep it under the line).</small></div>
+    <hr>
+    <div class="crf"><b>Your account</b><br><button id="setPw" class="crbtn">Send me a password reset link</button></div>
+    <div class="crf"><b>Connect a domain</b><br><small>Point your domain's DNS to GitHub Pages, then add a CNAME file. Send this to your web person or ask here and we'll do it.</small></div>
+    <button id="setSave" class="crbtn crbtn-primary">Save settings</button>
+  `);
+  // populate values safely (no HTML injection)
+  d.querySelector("#setIg").value = s.ig || "";
+  d.querySelector("#setIgFeed").checked = !!s.igFeedOn;
+  d.querySelector("#setFb").value = s.fb || "";
+  d.querySelector("#setYelp").value = s.yelp || "";
+  d.querySelector("#setNd").value = s.nextdoor || "";
+  d.querySelector("#setHours").value = content.hours || "";
+  d.querySelector("#setNotify").value = b.notifyEmail || "";
+  d.querySelector("#setAccent").value = content.brand.accent || "#2563EB";
+  d.querySelectorAll("[data-sec]").forEach(cb => { cb.checked = !!sec[cb.dataset.sec]; });
+  d.querySelector("#setPw").onclick = () => sendPasswordResetEmail(auth, currentUser.email)
+    .then(() => alert("Password reset link sent to " + currentUser.email))
+    .catch(e => alert("Failed: " + e.code));
+  d.querySelector("#setSave").onclick = async () => {
+    s.ig = d.querySelector("#setIg").value.trim();
+    s.igFeedOn = d.querySelector("#setIgFeed").checked;
+    s.fb = d.querySelector("#setFb").value.trim();
+    s.yelp = d.querySelector("#setYelp").value.trim();
+    s.nextdoor = d.querySelector("#setNd").value.trim();
+    content.hours = d.querySelector("#setHours").value.trim();
+    b.notifyEmail = d.querySelector("#setNotify").value.trim();
+    content.brand.accent = d.querySelector("#setAccent").value;
+    d.querySelectorAll("[data-sec]").forEach(cb => { sec[cb.dataset.sec] = cb.checked; });
+    try { await saveMeta(); hydrate(); d.remove(); }
+    catch (e) { alert("Save failed: " + (e.code || e.message)); }
+  };
+}
+
+async function fetchBookings() {
+  const q = query(collection(db, "sites", SITE_ID, "bookings"), orderBy("created", "desc"));
+  const snap = await getDocs(q);
+  const out = [];
+  snap.forEach(s => out.push({ id: s.id, ...s.data() }));
+  return out;
+}
+function priceNum(estimate) { const m = /\d[\d,]*/.exec(String(estimate || "")); return m ? +m[0].replace(/,/g, "") : 0; }
+
+async function openBookings() {
+  if (!currentUser) return;
+  const d = drawer("Bookings", `<div id="bkList">Loading…</div>`);
+  const list = d.querySelector("#bkList");
+  const render = (rows) => {
+    list.textContent = "";
+    if (!rows.length) { list.textContent = "No bookings yet. They'll appear here the moment someone books."; return; }
+    rows.forEach(b => {
+      const card = document.createElement("div"); card.className = "bk-card";
+      const badge = document.createElement("span"); badge.className = "bk-badge bk-" + (b.status || "new");
+      badge.textContent = ({ new: "New", confirmed: "Confirmed", done: "Done" })[b.status || "new"]; card.appendChild(badge);
+      const line = (k, v) => { if (!v) return; const p = document.createElement("div"); const a = document.createElement("b"); a.textContent = k + ": "; const s = document.createElement("span"); s.textContent = v; p.append(a, s); card.appendChild(p); };
+      line("Name", b.name); line("Phone", b.phone); line("Email", b.email); line("Package", b.package);
+      line("Vehicle", b.vehicle); line("Estimate", b.estimate); line("Add-ons", b.addons);
+      line("Date", b.date); line("Time", b.time); line("Where", b.address);
+      const acts = document.createElement("div"); acts.className = "bk-acts";
+      const btn = (label, fn, cls) => { const x = document.createElement("button"); x.className = "crbtn" + (cls ? " " + cls : ""); x.textContent = label; x.onclick = fn; acts.appendChild(x); };
+      if ((b.status || "new") === "new") btn("Confirm", async () => { await updateDoc(doc(db, "sites", SITE_ID, "bookings", b.id), { status: "confirmed" }); b.status = "confirmed"; render(rows); });
+      if ((b.status || "new") !== "done") btn("Mark done", async () => { await updateDoc(doc(db, "sites", SITE_ID, "bookings", b.id), { status: "done" }); b.status = "done"; render(rows); });
+      btn("Delete", async () => { if (!confirm("Delete this booking?")) return; await deleteDoc(doc(db, "sites", SITE_ID, "bookings", b.id)); render(rows.filter(r => r.id !== b.id)); }, "crbtn-danger");
+      card.appendChild(acts);
+      list.appendChild(card);
+    });
+  };
+  try { render(await fetchBookings()); }
+  catch (e) { list.textContent = "Could not load bookings: " + (e.code || e.message); }
+}
+
+/* ---- CUSTOMERS CRM: group bookings by phone → history, repeats, total, follow-up ---- */
+async function openCustomers() {
+  if (!currentUser) return;
+  const d = drawer("Customers", `<div id="custWrap">Loading…</div>`);
+  const wrap = d.querySelector("#custWrap");
+  let rows;
+  try { rows = await fetchBookings(); } catch (e) { wrap.textContent = "Could not load: " + (e.code || e.message); return; }
+  // group by phone (fallback name)
+  const map = {};
+  rows.forEach(b => {
+    const key = (b.phone || b.name || "").replace(/\D/g, "") || b.name || "unknown";
+    (map[key] = map[key] || { name: b.name, phone: b.phone, email: b.email, visits: [], total: 0 }).visits.push(b);
+  });
+  const custs = Object.values(map).map(c => {
+    c.total = c.visits.reduce((s, v) => s + priceNum(v.estimate), 0);
+    c.email = c.email || c.visits.map(v => v.email).find(Boolean) || "";
+    c.count = c.visits.length;
+    return c;
+  }).sort((a, b) => b.count - a.count);
+  const withEmail = custs.filter(c => c.email).length;
+
+  wrap.textContent = "";
+  const sum = document.createElement("div"); sum.className = "cust-sum";
+  sum.textContent = `${custs.length} customers · ${custs.filter(c => c.count > 1).length} repeat · ${withEmail} with email`;
+  wrap.appendChild(sum);
+  const promoBtn = document.createElement("button"); promoBtn.className = "crbtn crbtn-primary"; promoBtn.style.width = "100%"; promoBtn.textContent = "Send a promo →";
+  promoBtn.onclick = () => openPromo(custs);
+  wrap.appendChild(promoBtn);
+
+  custs.forEach(c => {
+    const card = document.createElement("div"); card.className = "cust-card";
+    const h = document.createElement("div"); h.className = "cust-head";
+    const nm = document.createElement("b"); nm.textContent = c.name || "(no name)";
+    const tag = document.createElement("span"); tag.className = "cust-tag" + (c.count > 1 ? " repeat" : "");
+    tag.textContent = c.count > 1 ? c.count + "× repeat" : "new"; h.append(nm, tag); card.appendChild(h);
+    const meta = document.createElement("div"); meta.className = "cust-meta";
+    meta.textContent = [c.phone, c.email, "~$" + c.total.toLocaleString() + " total", "last: " + (c.visits[0].date || "—")].filter(Boolean).join(" · ");
+    card.appendChild(meta);
+    wrap.appendChild(card);
+  });
+}
+
+function openPromo(custs) {
+  const emails = custs.map(c => c.email).filter(Boolean);
+  const phones = custs.map(c => c.phone).filter(Boolean);
+  const ej = content?.booking?.emailjs;
+  const d = drawer("Send a promo", `
+    <div class="crf">Audience: <b>${custs.length}</b> customers — <b>${emails.length}</b> have email, <b>${phones.length}</b> have a phone.</div>
+    <label class="crf">Subject <input id="promoSubj" placeholder="20% off your next detail"></label>
+    <label class="crf">Message <textarea id="promoMsg" rows="5" style="width:100%;background:#0f1114;border:1px solid #2b323b;border-radius:6px;color:#fff;padding:9px"></textarea></label>
+    <p class="crf" id="promoMode"></p>
+    <button id="promoSend" class="crbtn crbtn-primary" style="width:100%">Send email promo (${emails.length})</button>
+    <button id="promoSms" class="crbtn" style="width:100%">Copy phone list for texting (${phones.length})</button>
+    <p class="crf" id="promoOut" style="min-height:1.1em"></p>
+  `);
+  const out = (t, ok) => { const o = d.querySelector("#promoOut"); o.textContent = t; o.style.color = ok ? "#7fd47f" : "#f0a"; };
+  if (!(ej && ej.serviceId && ej.templateId && ej.publicKey)) {
+    d.querySelector("#promoMode").textContent = "Email sending needs a free EmailJS key in Settings first. You can still copy the phone list to text.";
+    d.querySelector("#promoSend").disabled = true;
+  }
+  d.querySelector("#promoSms").onclick = () => {
+    navigator.clipboard.writeText(phones.join(", ")).then(() => out("Phone list copied — paste into your texting app.", true)).catch(() => out("Copy failed."));
+  };
+  d.querySelector("#promoSend").onclick = async () => {
+    const subj = d.querySelector("#promoSubj").value.trim(), msg = d.querySelector("#promoMsg").value.trim();
+    if (!subj || !msg) return out("Add a subject and message.");
+    out("Sending…"); let sent = 0;
+    for (const c of custs.filter(x => x.email)) {
+      try { await window.emailjs.send(ej.serviceId, ej.templateId, { to_email: c.email, to_name: c.name || "", subject: subj, message: msg }, { publicKey: ej.publicKey }); sent++; }
+      catch (e) { /* continue */ }
+    }
+    out(`Sent to ${sent} of ${emails.length}.`, true);
+  };
+}
+
+async function saveMeta() { await setDoc(siteRef, content, { merge: false }); }
+window.__CR_content = () => content;
+window.__CR_seed = async () => { if (!currentUser) return "sign in first"; content = structuredClone(DEFAULT_CONTENT); await setDoc(siteRef, content, { merge: false }); hydrate(); return "seeded"; };
+
+/* ---- owner bar styles ---- */
+function injectOwnerStyles() {
+  const s = document.createElement("style");
+  s.textContent = `
+  #crOwnerBar{position:fixed;left:16px;bottom:16px;z-index:9999;font-family:system-ui,sans-serif}
+  #crOwnerBar button{background:#111;color:#fff;border:1px solid #333;border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;margin-right:6px}
+  #crOwnerBar button:hover{background:#222}
+  #crOwnerTools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:rgba(10,10,12,.92);padding:8px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:calc(100vw - 32px)}
+  #crOwnerTools[hidden]{display:none}
+  #crWho{color:#9aa;font-size:12px;margin-right:4px}
+  #crSaveBtn{background:var(--accent,#2563EB)!important;border-color:var(--accent,#2563EB)!important}
+  html,body{overflow-x:hidden;max-width:100%}
+  body.cr-editing [contenteditable="true"]{outline:1px dashed rgba(46,134,242,.7);outline-offset:2px;cursor:text;min-height:1em}
+  body.cr-editing [contenteditable="true"]:focus{outline:2px solid #2E86F2;background:rgba(46,134,242,.08)}
+  body.cr-editing .mobile-bar{display:none}
+  .cr-remove{position:absolute;top:-9px;right:-9px;z-index:6;width:24px;height:24px;border-radius:50%;background:#20242b;color:#cbd4de;border:1px solid #3a4048;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s,color .15s,transform .1s}
+  .cr-remove:hover{background:var(--accent,#2563EB);color:#fff;border-color:var(--accent,#2563EB);transform:scale(1.08)}
+  .cr-remove svg{display:block}
+  body.cr-editing #areaCities{gap:18px 16px}
+  body.cr-editing #areaCities li{overflow:visible}
+  body.cr-editing #workGrid figure{overflow:visible}
+  #crReframe{position:absolute;top:16px;right:16px;z-index:8;display:inline-flex;align-items:center;gap:7px;background:rgba(12,13,16,.82);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:9px 13px;font:600 13px system-ui;cursor:pointer;backdrop-filter:blur(6px)}
+  #crReframe:hover{background:#2E86F2;border-color:#2E86F2}
+  .cr-manage-hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9998;background:#20242b;color:#fff;border:1px solid #3a4048;padding:10px 18px;border-radius:22px;font:600 13px system-ui;box-shadow:0 8px 26px rgba(0,0,0,.5)}
+  #crGal{position:fixed;inset:0;z-index:10002;background:#0c0d10;color:#e8eef4;overflow:auto;padding:16px;font-family:system-ui,sans-serif;-webkit-overflow-scrolling:touch}
+  #crGal .crgal-head{position:sticky;top:-16px;background:#0c0d10;display:flex;justify-content:space-between;align-items:center;padding:10px 0 14px;margin:-4px 0 6px;border-bottom:1px solid #232830}
+  #crGal .crgal-head b{font-size:1.1rem}
+  #crGal .crgal-row{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #232830;flex-wrap:wrap}
+  #crGal .crgal-row img{width:72px;height:54px;object-fit:cover;border-radius:6px;flex:none;background:#161618}
+  #crGal .crgal-cap{flex:1;min-width:140px;padding:10px 11px;background:#14161a;border:1px solid #2a2f37;border-radius:8px;color:#fff;font-size:.9rem}
+  #crGal .crgal-btns{display:flex;gap:6px;flex:none}
+  #crGal .crbtn{padding:9px 13px;border-radius:8px;border:1px solid #2a2f37;background:#1c2027;color:#e8eef4;font-size:.84rem;font-weight:600;cursor:pointer}
+  #crGal .crbtn-primary{background:#2E86F2;border-color:#2E86F2}
+  #crGal .crbtn-danger{background:#3a1618;border-color:#5a2327;color:#ff9aa2}
+  #crGal .crgal-add{width:100%;margin-top:14px;padding:13px}
+  body.cr-editing .cr-removable{position:relative}
+  .cr-edit-hint{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:9998;background:#2E86F2;color:#fff;padding:8px 16px;border-radius:20px;font:600 13px system-ui;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  body.cr-editing a:not([data-edit]):not([data-ekey]):not(.cr-remove):not(.cr-adder),body.cr-editing button:not(.cr-remove):not(.cr-adder):not(#crSaveBtn):not(#crDone){pointer-events:none}
+  body.cr-editing [contenteditable="true"],body.cr-editing #workGrid img,body.cr-editing #crReframe,body.cr-editing .cr-remove,body.cr-editing .cr-adder,body.cr-editing #crHeroEd,body.cr-editing #crHeroEd *{pointer-events:auto}
+  body.cr-editing [data-field="hours"],body.cr-editing [data-phone],body.cr-editing [data-email],body.cr-editing [data-field="business.name"]{pointer-events:auto!important;cursor:help}
+  .cr-adder{display:inline-flex;align-items:center;gap:6px;margin:10px auto;background:#123;color:#8cf;border:1px dashed #2E86F2;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .cr-adder svg{flex:none}
+  #crDrawer{position:fixed;inset:0;z-index:10000;font-family:system-ui,sans-serif}
+  #crDrawer .crd-scrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+  #crDrawer .crd-panel{position:absolute;top:0;right:0;height:100%;width:min(420px,92vw);background:#14161a;color:#e8eef4;box-shadow:-10px 0 40px rgba(0,0,0,.5);display:flex;flex-direction:column}
+  #crDrawer .crd-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid #262b33}
+  #crDrawer .crd-head h3{margin:0;font-size:1.05rem}
+  #crDrawer .crd-x{background:none;border:0;color:#9aa;font-size:26px;cursor:pointer;line-height:1}
+  #crDrawer .crd-body{padding:18px;overflow:auto}
+  #crDrawer hr{border:0;border-top:1px solid #262b33;margin:16px 0}
+  .crf{display:block;margin:0 0 12px;font-size:.85rem;color:#aeb8c4}
+  .crf input:not([type=checkbox]):not([type=color]){display:block;width:100%;margin-top:5px;padding:9px 10px;background:#0f1114;border:1px solid #2b323b;border-radius:6px;color:#fff;font-size:.9rem}
+  .crf-row{display:flex;justify-content:space-between;align-items:center;margin:7px 0}
+  .crmeter{height:8px;background:#0f1114;border:1px solid #2b323b;border-radius:5px;overflow:hidden;margin:6px 0}
+  .crmeter span{display:block;height:100%;background:linear-gradient(90deg,#2E86F2,var(--accent,#2563EB))}
+  .crbtn{background:#222833;color:#dce4ee;border:1px solid #333c48;border-radius:6px;padding:9px 14px;font-size:.85rem;cursor:pointer;margin-top:8px}
+  .crbtn-primary{background:var(--accent,#2563EB);border-color:var(--accent,#2563EB);color:#fff;width:100%;margin-top:16px;padding:12px}
+  .bk-card{background:#0f1114;border:1px solid #262b33;border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:.85rem;position:relative}
+  .bk-card b{color:#8fa1b5;font-weight:600}
+  .bk-badge{position:absolute;top:12px;right:12px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:20px}
+  .bk-new{background:#3a2f12;color:#f5c451}.bk-confirmed{background:#12331f;color:#7fd47f}.bk-done{background:#22262c;color:#8fa1b5}
+  .bk-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .bk-acts .crbtn{margin-top:0;padding:6px 10px;font-size:.78rem}
+  .crbtn-danger{background:#3a1618;border-color:#5a2327;color:#f0a}
+  .cust-sum{color:#aeb8c4;font-size:.82rem;margin-bottom:10px}
+  .cust-card{background:#0f1114;border:1px solid #262b33;border-radius:8px;padding:11px 13px;margin:10px 0 0;font-size:.85rem}
+  .cust-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .cust-head b{font-size:.95rem}
+  .cust-tag{font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:20px;background:#22262c;color:#8fa1b5;white-space:nowrap}
+  .cust-tag.repeat{background:#12331f;color:#7fd47f}
+  .cust-meta{color:#8fa1b5;font-size:.78rem;margin-top:5px;word-break:break-word}
+  .trk-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid #232830;font-size:.9rem}
+  .trk-row b{color:#8fa1b5;font-weight:600}.trk-row span{text-align:right}
+  .trk-status{margin:2px 0 14px;padding:10px 12px;border-radius:8px;font-weight:600;text-align:center}
+  .trk-new{background:#3a2f12;color:#f5c451}.trk-confirmed{background:#12331f;color:#7fd47f}.trk-done{background:#22262c;color:#8fa1b5}
+  #crHeroEd{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10001;width:min(360px,92vw);background:#14161a;border:1px solid #2a2f37;border-radius:14px;padding:16px 18px;box-shadow:0 16px 50px rgba(0,0,0,.55);font-family:system-ui,sans-serif;color:#e8eef4}
+  #crHeroEd .crhe-title{font-weight:700;font-size:.95rem;margin:0 0 10px}
+  #crHeroEd label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.82rem;color:#9fb0c3;margin:0 0 10px}
+  #crHeroEd input[type=range]{flex:1;max-width:200px;accent-color:#2E86F2}
+  #crHeroEd .crhe-row{display:flex;gap:8px;margin-top:6px}
+  #crHeroEd .crbtn{flex:1;padding:9px 8px;border-radius:8px;border:1px solid #2a2f37;background:#1c2027;color:#e8eef4;font-size:.82rem;font-weight:600;cursor:pointer}
+  #crHeroEd .crbtn-primary{background:#2E86F2;border-color:#2E86F2}
+  body.cr-editing #crHeroEd button,body.cr-editing #crHeroEd input{pointer-events:auto!important}
+  `;
+  document.head.appendChild(s);
+}
+
+/* go */
+load();

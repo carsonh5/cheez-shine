@@ -1,0 +1,1386 @@
+{
+  "generatedAt": "2026-09-17T06:05:39.162Z",
+  "viewports": {
+    "360x640": {
+      "overview": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/360x640__overview.png"
+      },
+      "bookings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/360x640__bookings.png"
+      },
+      "availability": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/360x640__availability.png"
+      },
+      "customers": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/360x640__customers.png"
+      },
+      "promos": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/360x640__promos.png"
+      },
+      "settings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/360x640__settings.png"
+      },
+      "login": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "screenshot": "screens/360x640__login.png"
+      }
+    },
+    "390x844": {
+      "overview": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/390x844__overview.png"
+      },
+      "bookings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/390x844__bookings.png"
+      },
+      "availability": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/390x844__availability.png"
+      },
+      "customers": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/390x844__customers.png"
+      },
+      "promos": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/390x844__promos.png"
+      },
+      "settings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/390x844__settings.png"
+      },
+      "login": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "screenshot": "screens/390x844__login.png"
+      }
+    },
+    "414x896": {
+      "overview": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/414x896__overview.png"
+      },
+      "bookings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/414x896__bookings.png"
+      },
+      "availability": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/414x896__availability.png"
+      },
+      "customers": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/414x896__customers.png"
+      },
+      "promos": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/414x896__promos.png"
+      },
+      "settings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/414x896__settings.png"
+      },
+      "login": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "screenshot": "screens/414x896__login.png"
+      }
+    },
+    "768x1024": {
+      "overview": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/768x1024__overview.png"
+      },
+      "bookings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/768x1024__bookings.png"
+      },
+      "availability": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/768x1024__availability.png"
+      },
+      "customers": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/768x1024__customers.png"
+      },
+      "promos": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/768x1024__promos.png"
+      },
+      "settings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/768x1024__settings.png"
+      },
+      "login": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "screenshot": "screens/768x1024__login.png"
+      }
+    },
+    "1280x800": {
+      "overview": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          }
+        ],
+        "newErrors": [],
+        "screenshot": "screens/1280x800__overview.png"
+      },
+      "bookings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [
+          {
+            "tag": "button",
+            "cls": "bk-chip on",
+            "w": 61,
+            "h": 31,
+            "text": "All 25"
+          },
+          {
+            "tag": "button",
+            "cls": "bk-chip",
+            "w": 71,
+            "h": 31,
+            "text": "New 11"
+          },
+          {
+            "tag": "button",
+            "cls": "bk-chip",
+            "w": 99,
+            "h": 31,
+            "text": "Confirmed 5"
+          },
+          {
+            "tag": "button",
+            "cls": "bk-chip",
+            "w": 69,
+            "h": 31,
+            "text": "Done 7"
+          },
+          {
+            "tag": "button",
+            "cls": "bk-chip",
+            "w": 97,
+            "h": 31,
+            "text": "Cancelled 2"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 82,
+            "h": 34,
+            "text": "Ask review"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 82,
+            "h": 34,
+            "text": "Ask review"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 82,
+            "h": 34,
+            "text": "Ask review"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 82,
+            "h": 34,
+            "text": "Ask review"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 82,
+            "h": 34,
+            "text": "Ask review"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 82,
+            "h": 34,
+            "text": "Ask review"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 64,
+            "h": 34,
+            "text": "Reopen"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 82,
+            "h": 34,
+            "text": "Ask review"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 67,
+            "h": 34,
+            "text": "Confirm"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 51,
+            "h": 34,
+            "text": "Done"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 61,
+            "h": 34,
+            "text": "Cancel"
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-danger",
+            "w": 58,
+            "h": 34,
+            "text": "Delete"
+          }
+        ],
+        "newErrors": [],
+        "screenshot": "screens/1280x800__bookings.png"
+      },
+      "availability": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [
+          {
+            "tag": "button",
+            "cls": "btn btn-icon",
+            "w": 32,
+            "h": 32,
+            "text": ""
+          },
+          {
+            "tag": "button",
+            "cls": "btn btn-icon",
+            "w": 32,
+            "h": 32,
+            "text": ""
+          }
+        ],
+        "newErrors": [],
+        "screenshot": "screens/1280x800__availability.png"
+      },
+      "customers": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          },
+          {
+            "tag": "button",
+            "cls": "btn",
+            "w": 46,
+            "h": 34,
+            "text": "Text"
+          }
+        ],
+        "newErrors": [],
+        "screenshot": "screens/1280x800__customers.png"
+      },
+      "promos": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/1280x800__promos.png"
+      },
+      "settings": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "newErrors": [],
+        "screenshot": "screens/1280x800__settings.png"
+      },
+      "login": {
+        "overflowDoc": null,
+        "overflowEls": [],
+        "smallTargets": [],
+        "screenshot": "screens/1280x800__login.png"
+      }
+    }
+  },
+  "jsErrors": [],
+  "summary": {
+    "screensWithDocOverflow": 0,
+    "elementOverflows": 0,
+    "smallTapTargets": 160,
+    "jsErrors": 0
+  }
+}

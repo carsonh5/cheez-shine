@@ -1,0 +1,24 @@
+rules_version = '2';
+
+// ============================================================
+// Firebase Storage rules — DENY ALL (locked down).
+// ------------------------------------------------------------
+// The engine does NOT use Firebase Storage: photos are compressed
+// client-side and stored as data URLs inside the /sites/{siteId}
+// content doc (free, no Storage/billing needed). This file exists
+// only as a safe default so that if Storage ever gets enabled on a
+// project, it is not left world-open. Nothing is readable or
+// writable until you deliberately loosen this.
+//
+// It is optional to deploy this (the "Known upgrades" pack in
+// NICHE_PACKS.md discusses moving photos into a Storage-backed
+// subcollection later — if/when you do that, replace these rules).
+// ============================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

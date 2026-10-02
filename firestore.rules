@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// ============================================================
+// CLIENT-AGNOSTIC Firestore rules for the SMB site template.
+// ------------------------------------------------------------
+// Deploy the SAME file to every client's Firebase project — never
+// edit it per client. Owner writes are gated on an owners/{uid}
+// document existing, NOT on a hardcoded email allowlist. To make a
+// signed-in user an owner, create a doc at /owners/{their uid}
+// (see PROVISION_CHECKLIST.md step for the exact steps/commands).
+//
+// Data model this protects:
+//   /sites/{siteId}                         -> the content doc (public read, owner write)
+//   /sites/{siteId}/bookings/{bookingId}    -> booking requests
+//   /owners/{uid}                           -> presence = "this user is an owner"
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Is the caller a signed-in owner? True iff /owners/{their uid} exists.
+    function isOwner() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/owners/$(request.auth.uid));
+    }
+
+    // ---- owners registry ----
+    // Readable so isOwner() works and the app can self-check; only an
+    // existing owner may add/remove owners. First owner is bootstrapped
+    // from the console (see checklist) while the collection is empty.
+    match /owners/{uid} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // ---- the site content doc ----
+    // Public read (the whole point — visitors hydrate the page from it).
+    // Only owners may create/update/delete it. The engine auto-seeds this
+    // doc on the first owner visit (app.js maybeSeed), which is a create
+    // by a signed-in owner — allowed here.
+    match /sites/{siteId} {
+      allow read: if true;
+      allow write: if isOwner();
+
+      // ---- bookings subcollection ----
+      // Anyone (including anonymous visitors) may CREATE a booking request
+      // from the public site. Reading, updating (confirm/mark done) and
+      // deleting bookings is owner-only. The customer "track your booking"
+      // and "my bookings" features read individual docs; those reads are
+      // owner-gated here, so if you want public track-by-link to keep
+      // working, see the note below.
+      match /bookings/{bookingId} {
+        allow create: if true;
+        allow read, update, delete: if isOwner();
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+// NOTE on the public "track your booking" (?track=<id>) and customer
+// "My bookings" (Google sign-in) features:
+//   The public site's "track" / "my bookings" features let a customer read
+//   their own booking doc(s). The strict rules above make booking reads owner-only,
+//   which DISABLES those two customer-facing read paths (the booking is
+//   still created fine; the owner still sees it; only the customer's own
+//   lookup is blocked). This is the safe default — a booking doc holds a
+//   name/phone/address, so a public "read any booking by id" rule leaks PII
+//   to anyone who guesses/enumerates an id.
+//
+//   If a given client wants those customer read features back, replace the
+//   bookings read rule with one of:
+//     (a) capability-link read (track-by-id): allow get: if true;   // read a SINGLE doc by exact id, no list/enumeration. Weaker: anyone with the id sees that booking's PII.
+//     (b) signed-in customer read: allow read: if isOwner()
+//            || (request.auth != null && resource.data.email == request.auth.token.email);
+//   Pick per client; leave the strict default unless they ask.

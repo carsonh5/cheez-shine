@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- SEO / social — these are the STATIC pre-hydration values (crawlers + no-JS view).
+     app.js re-syncs title/description/OG/JSON-LD from the live content doc at runtime,
+     so post-launch edits propagate; but fill the placeholders below (new_client.py does
+     most of this) so the first crawl and any no-JS render are on-brand.
+     The site-URL placeholder below is https://<github-username>.github.io/<site-id>/ (trailing slash). -->
+<title>Cheez Shine Mobile Detail — Instant quote &amp; online booking</title>
+<meta name="description" content="Cheez Shine Mobile Detail. Instant pricing and easy online booking. We come to you." />
+<meta name="robots" content="noindex, nofollow" /><!-- DEMO stage: prices are draft — remove this line at launch -->
+<link rel="canonical" href="https://carsonh5.github.io/cheez-shine/" />
+<!-- Social share (Open Graph + Twitter) -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Cheez Shine Mobile Detail" />
+<meta property="og:description" content="Instant pricing and easy online booking. We come to you." />
+<meta property="og:url" content="https://carsonh5.github.io/cheez-shine/" />
+<meta property="og:image" content="https://carsonh5.github.io/cheez-shine/images/hero.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Cheez Shine Mobile Detail" />
+<meta name="twitter:description" content="Instant pricing &amp; easy online booking. We come to you." />
+<meta name="twitter:image" content="https://carsonh5.github.io/cheez-shine/images/hero.jpg" />
+<!-- Local business structured data (helps Google understand + rank the business).
+     app.js overwrites this JSON at runtime from the live content doc; the static copy
+     below is the pre-hydration fallback. -->
+<script type="application/ld+json" id="ldBiz">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "Cheez Shine Mobile Detail",
+  "image": "https://carsonh5.github.io/cheez-shine/images/hero.jpg",
+  "url": "https://carsonh5.github.io/cheez-shine/",
+  "telephone": "+15592608749",
+  "email": "owner@example.com",
+  "priceRange": "$$",
+  "description": "Instant pricing and easy online booking. We come to you.",
+  "address": { "@type": "PostalAddress", "addressCountry": "US" }
+}
+</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%230C0C0D'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='28' font-weight='800' fill='%232563EB' text-anchor='middle'%3E%E2%97%8F%3C/text%3E%3C/svg%3E" />
+<meta name="theme-color" content="#0C0C0D" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<link rel="stylesheet" href="./styles.css?v=10" />
+</head>
+<body>
+
+<header class="nav">
+  <div class="shell nav-in">
+    <a class="logo" href="#top" data-field="business.name">Your&nbsp;<span data-field="business.nameSub">Business</span></a>
+    <nav class="nav-links">
+      <a href="#pricing">Pricing</a>
+      <a href="#work">Work</a>
+      <a href="#story">Story</a>
+    </nav>
+    <a class="cta-text" href="#pricing">Get a quote <span aria-hidden="true">&rsaquo;</span></a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <img class="hero-img" data-field="hero.photo" src="./images/hero.jpg" alt="" />
+  <div class="hero-veil"></div>
+  <div class="shell hero-in">
+    <h1><span data-field="hero.headline">Showroom finish.</span><br><em data-field="hero.em">Your driveway.</em></h1>
+    <p class="hero-sub" data-field="hero.sub">Interior and exterior detailing for cars, trucks, boats and RVs — done at your home or office across the metro.</p>
+    <div class="hero-act">
+      <a class="btn" href="#pricing">Build your quote</a>
+      <a class="btn-quiet" data-phone data-phone-text href="#">Call or Text</a>
+    </div>
+    <p class="hero-mark" data-field="hero.mark">Mobile detailing  ·  Owner-operated  ·  We come to you</p>
+    <p id="socialLinks" class="social-links"></p>
+  </div>
+</section>
+
+<!-- PRICING + QUOTE -->
+<section class="price" id="pricing">
+  <div class="shell">
+    <div class="sec-head">
+      <p class="over">Pricing</p>
+      <h2>Instant pricing. No surprises.</h2>
+      <p class="sec-lead" data-field="pricingLead">Pick a package, add your vehicle and any extras, and your price updates as you go — no waiting on a callback. We confirm the final number after a couple of quick photos.</p>
+    </div>
+
+    <form id="quote">
+      <div class="tiers" id="pkgTiers" role="radiogroup" aria-label="Detailing package"></div>
+
+      <div class="builder">
+        <div class="build-rows">
+          <div class="build-row">
+            <span class="build-label">Your vehicle</span>
+            <div class="seg" id="vehSeg" role="radiogroup" aria-label="Vehicle size"></div>
+          </div>
+          <div class="build-row">
+            <span class="build-label">Add-ons</span>
+            <div class="extras" id="addonList"></div>
+          </div>
+        </div>
+
+        <aside class="estimate">
+          <p class="est-label">Your estimate</p>
+          <p class="est-num" id="est">$—</p>
+          <p class="est-note" id="estNote">Pick a package to start.</p>
+          <button type="button" class="btn btn-block" id="bookBtn">Book this detail</button>
+          <p class="est-fine">Have a boat, RV or motorcycle? Add a photo when you book and we'll confirm your price. Final price confirmed after a couple of photos.</p>
+        </aside>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- WORK -->
+<section class="work" id="work">
+  <div class="shell">
+    <div class="sec-head">
+      <p class="over">The work, up close</p>
+      <h2 data-field="workHeading">Your vehicle could look like this.</h2>
+    </div>
+    <div class="grid" id="workGrid"></div>
+  </div>
+</section>
+
+<!-- STORY -->
+<section class="reviews" id="story">
+  <div class="shell reviews-in">
+    <p class="over" data-field="story.over">From the owner</p>
+    <blockquote data-field="story.quote">…</blockquote>
+    <cite data-field="story.cite">Owner, Cheez Shine Mobile Detail</cite>
+  </div>
+</section>
+
+<!-- CUSTOMER REVIEWS -->
+<section class="reviews reviews-alt" id="reviewsSection">
+  <div class="shell">
+    <div class="sec-head"><p class="over">What customers say</p><h2>Word of mouth.</h2></div>
+    <div id="reviewList" class="rev-grid"></div>
+  </div>
+</section>
+
+<!-- SERVICE AREA -->
+<section class="area" id="area">
+  <div class="shell area-in">
+    <div class="area-copy">
+      <p class="over">Service area</p>
+      <h2>We come to you.</h2>
+      <p class="sec-lead" data-field="area.lead">Fully mobile across the metro.</p>
+      <ul class="area-cities" id="areaCities"></ul>
+    </div>
+    <div class="area-map"><div id="map" aria-label="Map of the service area"></div></div>
+  </div>
+</section>
+
+<!-- IG FEED (optional, hidden until enabled) -->
+<section class="igfeed" id="igFeed" hidden>
+  <div class="shell">
+    <div class="sec-head"><p class="over">Latest on Instagram</p><h2>Fresh from the driveway.</h2></div>
+    <div id="igFeedMount"></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="end">
+  <div class="shell end-in">
+    <h2>Your driveway. Your schedule.</h2>
+    <p>Build your quote in a minute, or just call us — we come to you across the metro.</p>
+    <div class="hero-act">
+      <a class="btn" href="#pricing">Build your quote</a>
+      <a class="btn-quiet" data-phone data-phone-text href="#">Call or Text</a>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="shell foot-in">
+    <div>
+      <a class="logo" href="#top" data-field="business.name">Your&nbsp;<span data-field="business.nameSub">Business</span></a>
+      <p class="foot-note">Mobile auto, boat, RV &amp; motorcycle detailing. We come to you.</p>
+    </div>
+    <div class="foot-col">
+      <span class="foot-h">Hours</span>
+      <p data-field="hours">By appointment — call or text to book.</p>
+    </div>
+    <div class="foot-col">
+      <span class="foot-h">Contact</span>
+      <p><a href="#" id="myBookingsLink" style="font-weight:600">My bookings &rsaquo;</a><br><a data-phone href="#">Call or text</a><br><a data-email href="#">Email us</a><br><a href="./admin.html" style="opacity:.4;font-size:.72rem">Owner sign in</a></p>
+    </div>
+  </div>
+</footer>
+
+<!-- LIGHTBOX -->
+<div class="lb" id="lb" aria-hidden="true">
+  <button class="lb-close" id="lbClose" aria-label="Close">&times;</button>
+  <button class="lb-nav lb-prev" id="lbPrev" aria-label="Previous">&lsaquo;</button>
+  <img class="lb-img" id="lbImg" alt="" />
+  <button class="lb-nav lb-next" id="lbNext" aria-label="Next">&rsaquo;</button>
+</div>
+
+<!-- BOOKING MODAL -->
+<div class="modal" id="bk" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bkTitle">
+  <div class="modal-card">
+    <button type="button" class="modal-x" id="bkClose" aria-label="Close">&times;</button>
+    <div class="bk-step" id="bkForm">
+      <p class="over">Book your detail</p>
+      <h3 id="bkTitle">A couple details and we'll lock it in.</h3>
+      <div class="bk-summary" id="bkSummary"></div>
+      <div class="bk-field"><label class="build-label" for="bkDate">Preferred date</label><input type="date" id="bkDate" class="bk-input" /></div>
+      <div class="bk-field"><span class="build-label">Time</span>
+        <div class="seg seg-3" id="bkTime" role="radiogroup" aria-label="Time"></div>
+        <p class="bk-slotnote" id="bkSlotNote"></p>
+      </div>
+      <div class="bk-grid">
+        <div class="bk-field"><label class="build-label" for="bkName">Name</label><input type="text" id="bkName" class="bk-input" autocomplete="name" /></div>
+        <div class="bk-field"><label class="build-label" for="bkPhone">Mobile</label><input type="tel" id="bkPhone" class="bk-input" autocomplete="tel" placeholder="(555) 555-0100" /></div>
+      </div>
+      <div class="bk-field"><label class="build-label" for="bkEmail">Email <span style="opacity:.6">(optional)</span></label><input type="email" id="bkEmail" class="bk-input" autocomplete="email" /></div>
+      <div class="bk-field bk-addr"><label class="build-label" for="bkAddr">Where we're coming (address or area)</label><input type="text" id="bkAddr" class="bk-input" autocomplete="off" placeholder="Start typing your address…" /><div class="addr-sug" id="bkAddrSug" hidden></div></div>
+      <div class="bk-field" id="bkPhotoField"><span class="build-label">Add photos of your vehicle (optional)</span>
+        <label class="bk-file"><input type="file" id="bkPhotos" accept="image/*" multiple hidden />
+          <span class="bk-file-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>Add photos</span>
+          <span class="bk-file-names" id="bkPhotoNames">No photos added</span></label>
+        <div id="bkThumbRow" style="display:none;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+        <p id="bkPhotoNote" style="display:none;font-size:.8rem;color:var(--muted,#6b7280);margin:6px 0 0"></p></div>
+      <div class="bk-field"><label class="build-label" for="bkNotes">Anything else? <span style="opacity:.6">(optional)</span></label><textarea id="bkNotes" class="bk-input" rows="3" placeholder="Gate code, heavy pet hair, specific concerns, best time to reach you…"></textarea></div>
+      <p class="bk-err" id="bkErr" hidden>Add your name and a mobile number so we can confirm.</p>
+      <button type="button" class="btn btn-block" id="bkSubmit">Request this time</button>
+      <p class="est-fine">No charge yet. We text you to confirm the time and final price, then you're booked.</p>
+    </div>
+    <div class="bk-step" id="bkDone" hidden>
+      <div class="bk-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="26" height="26"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h3>You're on the list.</h3>
+      <p class="bk-done-note" id="bkDoneNote"></p>
+      <a class="btn btn-primary btn-block" id="bkPay" href="#" target="_blank" rel="noopener" hidden>Pay a deposit</a>
+      <a class="btn btn-block" id="bkText" href="#">Text us to confirm now</a>
+      <a class="btn-quiet" id="bkTrack" href="#" hidden style="display:block;text-align:center;margin-top:10px">Track your booking →</a>
+      <button type="button" class="btn-quiet bk-restart" id="bkRestart">Edit my request</button>
+    </div>
+  </div>
+</div>
+
+<script src="./client.config.js"></script>
+<script src="./content.js"></script>
+<script type="module" src="./app.js?v=27"></script>
+
+<!-- Quote engine + booking + lightbox + map (coordinates with app.js via window.__CR_*) -->
+<script>
+(function(){
+  function PHONERAW(){ var p=((window.__CR_content&&window.__CR_content().business)||{}).phone||''; var d=String(p).replace(/\D/g,''); return d?('+1'+d):((window.CLIENT&&window.CLIENT.phoneRaw)||'+10000000000'); }
+  var form = document.getElementById('quote');
+  var est = document.getElementById('est'), note = document.getElementById('estNote');
+
+  function C(){ return (window.__CR_content && window.__CR_content()) || {}; }
+  function labelPkg(id){ var p=(C().packages||[]).find(function(x){return x.id===id;}); return p?p.name:id; }
+  function labelVeh(id){ var v=(C().vehicles||[]).find(function(x){return x.id===id;}); return v?v.label:id; }
+  function labelEx(k){ var a=(C().addons||[]).find(function(x){return x.id===k;}); return a?a.label:k; }
+  function included(){ var c=C(); return c.included||{}; }
+  function money(n){ return '$'+Number(n).toLocaleString('en-US'); }
+  function val(sel){ return form.querySelector(sel+':checked'); }
+
+  function applyIncluded(){
+    var pkg = val('input[name="pkg"]'); var inc = pkg ? (included()[pkg.value]||[]) : [];
+    form.querySelectorAll('input[name="ex"]').forEach(function(e){
+      var b=e.parentNode.querySelector('b'); var covered=inc.indexOf(e.dataset.key)>-1;
+      if(covered){ e.checked=true; e.disabled=true; if(b) b.textContent='Included'; }
+      else { e.disabled=false; if(b && b.textContent==='Included'){ e.checked=false; } if(b) b.textContent=b.dataset.price; }
+    });
+  }
+  function getQuote(){
+    var pkg=val('input[name="pkg"]'), veh=val('input[name="veh"]');
+    var base=pkg?parseInt(pkg.dataset.base,10):0, add=veh?parseInt(veh.dataset.add,10):0, exTotal=0, extras=[];
+    form.querySelectorAll('input[name="ex"]:checked').forEach(function(e){
+      var paid=!e.disabled; if(paid) exTotal+=parseInt(e.dataset.add,10);
+      extras.push({name:labelEx(e.dataset.key), included:!paid, price:paid?parseInt(e.dataset.add,10):0});
+    });
+    return { hasPkg:!!pkg, pkg:pkg?labelPkg(pkg.value):null, veh:veh?labelVeh(veh.value):null, extras:extras, total:base+add+exTotal };
+  }
+  function render(){
+    var q=getQuote(); var bb=document.getElementById('bookBtn');
+    if(!q.hasPkg){ est.textContent='$—'; note.textContent='Pick a package to start.'; if(bb) bb.textContent='Get a custom quote'; return; }
+    if(bb) bb.textContent='Book this detail';
+    est.textContent=money(q.total);
+    note.textContent=q.veh?'Final price confirmed after photos.':'Add your vehicle for an exact estimate.';
+  }
+  form.addEventListener('change', function(e){ if(e.target.name==='pkg'){ applyIncluded(); } render(); });
+  window.__CR_recomputeQuote = function(){ applyIncluded(); render(); };
+  window.__CR_getQuote = getQuote; window.__CR_money = money;
+
+  /* lightbox (re-bindable after gallery re-render) */
+  var lb=document.getElementById('lb'), lbImg=document.getElementById('lbImg'), i=0, imgs=[];
+  /* Only include images that loaded successfully (naturalWidth>0) — skip broken placeholders */
+  function loadedImgs(){ return imgs.filter(function(img){ return img.naturalWidth>0; }); }
+  function show(n){ var li=loadedImgs(); if(!li.length) return; i=(n+li.length)%li.length; lbImg.src=li[i].src; lbImg.alt=li[i].alt; }
+  function open(n){
+    var li=loadedImgs(); if(!li.length) return;   /* no loaded images — nothing to show */
+    /* find the index in loadedImgs for the clicked image */
+    var src=imgs[n]&&imgs[n].src; var li_n=li.findIndex(function(x){return x.src===src;}); if(li_n<0) return;
+    i=li_n; lbImg.src=li[i].src; lbImg.alt=li[i].alt;
+    lb.classList.add('on'); lb.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+  }
+  function close(){ lb.classList.remove('on'); lb.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  window.__CR_bindLightbox = function(){
+    imgs = Array.prototype.slice.call(document.querySelectorAll('#workGrid figure img'));
+    imgs.forEach(function(img,n){ img.addEventListener('click', function(ev){ if(document.body.classList.contains('cr-editing')) return; open(n); }); });
+  };
+  document.getElementById('lbClose').addEventListener('click', close);
+  document.getElementById('lbPrev').addEventListener('click', function(){ show(i-1); });
+  document.getElementById('lbNext').addEventListener('click', function(){ show(i+1); });
+  lb.addEventListener('click', function(e){ if(e.target===lb) close(); });
+  document.addEventListener('keydown', function(e){ if(!lb.classList.contains('on'))return; if(e.key==='Escape')close(); if(e.key==='ArrowLeft')show(i-1); if(e.key==='ArrowRight')show(i+1); });
+
+  /* booking modal */
+  var bk=document.getElementById('bk'), summary=document.getElementById('bkSummary');
+  var stepForm=document.getElementById('bkForm'), stepDone=document.getElementById('bkDone');
+  function openBk(){
+    var q=getQuote(), html;
+    if(q.hasPkg){
+      html='<div class="bk-sum-row"><span>'+q.pkg+(q.veh?' · '+q.veh:'')+'</span><b>'+money(q.total)+'</b></div>';
+      var paid=q.extras.filter(function(x){return !x.included;});
+      if(paid.length) html+='<div class="bk-sum-add">+ '+paid.map(function(x){return x.name;}).join(', ')+'</div>';
+      html+='<div class="bk-sum-fine">Estimate — final price confirmed after a couple of photos.</div>';
+    } else { html='<div class="bk-sum-row"><span>Custom detail</span><b>Quote by text</b></div>'; }
+    summary.innerHTML=html; stepDone.hidden=true; stepForm.hidden=false;
+    bk.classList.add('on'); bk.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    document.getElementById('bkErr').hidden=true;
+    applyDateLimits(); refreshSlots();
+  }
+  var dateEl=document.getElementById('bkDate'), slotNote=document.getElementById('bkSlotNote');
+  function applyDateLimits(){
+    if(!window.__CR_dateLimits) return;
+    var lim=window.__CR_dateLimits(); dateEl.min=lim.min; dateEl.max=lim.max;
+  }
+  function refreshSlots(){
+    if(!window.__CR_bookingAvail) return;
+    var d=dateEl.value, av=window.__CR_bookingAvail(d);
+    var radios=bk.querySelectorAll('input[name="bktime"]'); var anyOpen=false;
+    radios.forEach(function(r){
+      var s=av.slots.find(function(x){return x.label===r.value;});
+      var ok=!d || (s?s.available:true);   // before a date is picked, all show as selectable
+      r.disabled=!ok; if(ok) anyOpen=true;
+      if(!ok && r.checked) r.checked=false;
+    });
+    if(!d){ slotNote.textContent=''; slotNote.className='bk-slotnote'; }
+    else if(!av.open){ slotNote.textContent=av.reason; slotNote.className='bk-slotnote warn'; }
+    else if(!anyOpen){ slotNote.textContent="That day's fully booked — please pick another date."; slotNote.className='bk-slotnote warn'; }
+    else { slotNote.textContent=''; slotNote.className='bk-slotnote'; }
+  }
+  dateEl.addEventListener('change', refreshSlots);
+  function closeBk(){ bk.classList.remove('on'); bk.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  document.getElementById('bookBtn').addEventListener('click', openBk);
+  document.getElementById('bkClose').addEventListener('click', closeBk);
+  bk.addEventListener('click', function(e){ if(e.target===bk) closeBk(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'&&bk.classList.contains('on')) closeBk(); });
+
+  document.getElementById('bkSubmit').addEventListener('click', function(){
+    var name=document.getElementById('bkName').value.trim(), phone=document.getElementById('bkPhone').value.trim();
+    if(!name||!phone){ var e0=document.getElementById('bkErr'); e0.textContent='Add your name and a mobile number so we can confirm.'; e0.hidden=false; return; }
+    var date=document.getElementById('bkDate').value, t=bk.querySelector('input[name="bktime"]:checked'), addr=document.getElementById('bkAddr').value.trim();
+    if(date && window.__CR_bookingAvail){
+      var av=window.__CR_bookingAvail(date);
+      if(!av.open){ var er=document.getElementById('bkErr'); er.textContent=av.reason||"Please pick an available date."; er.hidden=false; return; }
+      if(t){ var sl=av.slots.find(function(x){return x.label===t.value;}); if(sl && !sl.available){ var er2=document.getElementById('bkErr'); er2.textContent="That time was just taken — please pick another."; er2.hidden=false; return; } }
+    }
+    var q=getQuote();
+    var email=document.getElementById('bkEmail').value.trim();
+    var notes=document.getElementById('bkNotes').value.trim();
+    var photos=window.__CR_getBookingPhotos?window.__CR_getBookingPhotos():[];
+    var payload={ name:name, phone:phone, email:email, date:date||'', time:t?t.value:'', address:addr, notes:notes,
+      package:q.pkg||'Custom', vehicle:q.veh||'', estimate:q.hasPkg?money(q.total):'by text',
+      addons:q.extras.filter(function(x){return !x.included;}).map(function(x){return x.name;}).join(', ') };
+    if(photos.length) payload.photos=photos;
+    if(window.__CR_submitBooking){ window.__CR_submitBooking(payload).then(function(id){
+      if(id){ var tr=document.getElementById('bkTrack'); tr.href=location.origin+location.pathname+'?track='+id; tr.hidden=false; }
+    }); }
+    var lines=['Detail request — '+name]; if(q.hasPkg) lines.push(q.pkg+(q.veh?' ('+q.veh+')':'')+' — '+money(q.total)+' est.');
+    if(date) lines.push('Date: '+date); if(t) lines.push('Time: '+t.value); if(addr) lines.push('Location: '+addr); if(notes) lines.push('Notes: '+notes); lines.push('Phone: '+phone);
+    document.getElementById('bkText').href='sms:'+PHONERAW()+'?&body='+encodeURIComponent(lines.join('\n'));
+    var doneNote=document.getElementById('bkDoneNote');
+    doneNote.textContent="We'll text "+phone+' to confirm your time'+(date?' on '+date:'')+' and the final price.';
+    // photos ride the Firestore doc — for SMS-fallback users (tap "Text us to confirm now"),
+    // data URLs can't fit in an SMS body so photos will need to be requested separately
+    var oldHint=document.getElementById('bkPhotosHint'); if(oldHint) oldHint.remove();
+    if(photos.length){
+      var photoHint=document.createElement('p');
+      photoHint.className='est-fine'; photoHint.id='bkPhotosHint';
+      photoHint.textContent='Your '+(photos.length===1?'photo was':'photos were')+' attached to your request. If you text to confirm instead, photos will be requested by text.';
+      doneNote.insertAdjacentElement('afterend',photoHint);
+    }
+    var pay=document.getElementById('bkPay'), bcfg=(C().booking)||{};
+    if(pay){ var pl=String(bcfg.payLink||''); var okPay=bcfg.payOn && /^https?:\/\//i.test(pl);
+      if(okPay){ pay.href=pl; pay.textContent=bcfg.payLabel||'Pay a deposit to lock your spot'; pay.hidden=false; } else { pay.hidden=true; } }
+    stepForm.hidden=true; stepDone.hidden=false;
+    if(window.__CR_clearBookingPhotos) window.__CR_clearBookingPhotos();
+  });
+  document.getElementById('bkRestart').addEventListener('click', function(){ stepDone.hidden=true; stepForm.hidden=false; });
+
+  /* ---- booking photos: compress → data URL → thumbnails with remove buttons ---- */
+  (function(){
+    var fi=document.getElementById('bkPhotos'), nm=document.getElementById('bkPhotoNames');
+    var thumbRow=document.getElementById('bkThumbRow'), photoNote=document.getElementById('bkPhotoNote');
+    if(!fi||!nm) return;
+    var MAX_PHOTOS=3, PER_PHOTO_CAP=250*1024, DOC_LIMIT=900*1024;
+    var attachedPhotos=[]; // [{dataUrl:string}]
+
+    function updateNm(){
+      var n=attachedPhotos.length;
+      nm.textContent = n===0?'No photos added':(n===1?'1 photo added':n+' photos added');
+      if(thumbRow) thumbRow.style.display=n>0?'flex':'none';
+      photoNote.style.display='none'; photoNote.textContent='';
+    }
+    function renderThumbs(){
+      if(!thumbRow) return;
+      thumbRow.innerHTML='';
+      attachedPhotos.forEach(function(p,i){
+        var wrap=document.createElement('div');
+        wrap.style.cssText='position:relative;display:inline-block;flex:none';
+        var img=document.createElement('img');
+        img.src=p.dataUrl; img.alt='Preview '+(i+1);
+        img.style.cssText='width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid rgba(0,0,0,.15);display:block';
+        var rm=document.createElement('button');
+        rm.type='button'; rm.title='Remove this photo';
+        rm.innerHTML='&times;';
+        rm.style.cssText='position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#374151;color:#fff;border:none;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0';
+        rm.setAttribute('aria-label','Remove photo '+(i+1));
+        rm.addEventListener('click',function(){ attachedPhotos.splice(i,1); renderThumbs(); updateNm(); });
+        wrap.appendChild(img); wrap.appendChild(rm);
+        thumbRow.appendChild(wrap);
+      });
+    }
+    async function compressFile(file){
+      return new Promise(function(resolve,reject){
+        var img=new Image(), url=URL.createObjectURL(file);
+        img.onload=function(){
+          URL.revokeObjectURL(url);
+          var MAX_EDGE=800, scale=Math.min(1,MAX_EDGE/Math.max(img.width,img.height));
+          var cv=document.createElement('canvas');
+          cv.width=Math.round(img.width*scale); cv.height=Math.round(img.height*scale);
+          cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+          // try quality 0.7 first; if still over PER_PHOTO_CAP, halve quality until <=0.3
+          var q=0.7, dataUrl=cv.toDataURL('image/jpeg',q);
+          // data URLs: each base64 char ~= 0.75 bytes
+          function byteLen(du){ return Math.round((du.length - du.indexOf(',')-1)*0.75); }
+          while(byteLen(dataUrl)>PER_PHOTO_CAP && q>0.3){ q=Math.round((q-0.15)*100)/100; dataUrl=cv.toDataURL('image/jpeg',Math.max(q,0.3)); }
+          if(byteLen(dataUrl)>PER_PHOTO_CAP){ resolve(null); } // still over after minimum quality
+          else { resolve(dataUrl); }
+        };
+        img.onerror=function(){ URL.revokeObjectURL(url); reject(new Error('load failed')); };
+        img.src=url;
+      });
+    }
+    function currentDocEstimateBytes(){
+      // rough estimate: each existing photo data URL plus a small base booking doc
+      var baseBytes=2048; // booking fields (name/phone/date etc.)
+      return baseBytes + attachedPhotos.reduce(function(sum,p){ return sum+Math.round((p.dataUrl.length-p.dataUrl.indexOf(',')-1)*0.75); },0);
+    }
+    fi.addEventListener('change',function(){
+      var files=Array.prototype.slice.call(fi.files||[]);
+      fi.value=''; // reset so same file can be re-added after removal
+      if(!files.length) return;
+      var notices=[];
+      var queue=files.slice();
+      function next(){
+        if(!queue.length){ if(notices.length){ photoNote.textContent=notices.join(' '); photoNote.style.display='block'; } return; }
+        var f=queue.shift();
+        if(attachedPhotos.length>=MAX_PHOTOS){ notices.push('Max '+MAX_PHOTOS+' photos — extra skipped.'); next(); return; }
+        compressFile(f).then(function(dataUrl){
+          if(!dataUrl){ notices.push('"'+f.name+'" is too large even at minimum quality — skipped.'); next(); return; }
+          var added=Math.round((dataUrl.length-dataUrl.indexOf(',')-1)*0.75);
+          if(currentDocEstimateBytes()+added>DOC_LIMIT){ notices.push('Adding more photos would exceed the booking size limit — skipped.'); next(); return; }
+          attachedPhotos.push({dataUrl:dataUrl}); renderThumbs(); updateNm(); next();
+        }).catch(function(){ notices.push('"'+f.name+'" could not be read — skipped.'); next(); });
+      }
+      next();
+    });
+    // expose attached photos for the submit handler
+    window.__CR_getBookingPhotos=function(){ return attachedPhotos.map(function(p){return p.dataUrl;}); };
+    window.__CR_clearBookingPhotos=function(){ attachedPhotos=[]; renderThumbs(); updateNm(); };
+  })();
+
+  /* address autocomplete — free Photon geocoder (no key/billing), graceful fallback to plain text */
+  (function(){
+    var addr=document.getElementById('bkAddr'), sug=document.getElementById('bkAddrSug'), t;
+    if(!addr||!sug) return;
+    function hide(){ sug.hidden=true; sug.innerHTML=''; }
+    var bias=(window.CLIENT&&window.CLIENT.map&&window.CLIENT.map.center)||null;
+    addr.addEventListener('input', function(){
+      clearTimeout(t); var q=addr.value.trim();
+      if(q.length<4){ hide(); return; }
+      t=setTimeout(function(){
+        var url='https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=5';
+        if(bias) url+='&lat='+bias[0]+'&lon='+bias[1];   // bias toward the service area if configured
+        fetch(url)
+          .then(function(r){return r.json();})
+          .then(function(d){
+            var feats=(d&&d.features)||[];
+            sug.innerHTML='';
+            feats.forEach(function(f){
+              var p=f.properties||{}, parts=[];
+              if(p.housenumber&&p.street) parts.push(p.housenumber+' '+p.street);
+              else if(p.street) parts.push(p.street); else if(p.name) parts.push(p.name);
+              if(p.city||p.town||p.village) parts.push(p.city||p.town||p.village);
+              if(p.state) parts.push(p.state);
+              var label=parts.join(', '); if(!label) return;
+              var div=document.createElement('div'); div.className='addr-opt'; div.textContent=label;
+              div.addEventListener('mousedown', function(e){ e.preventDefault(); addr.value=label; hide(); });
+              sug.appendChild(div);
+            });
+            sug.hidden = sug.children.length===0;
+          }).catch(hide);
+      }, 300);
+    });
+    addr.addEventListener('blur', function(){ setTimeout(hide, 150); });
+  })();
+
+  /* service-area map — center/radius/cities from client.config.js (window.CLIENT.map),
+     ring+marker color from the live accent (content.brand.accent, falling back to CLIENT.accent).
+     MapLibre GL + OpenFreeMap dark style (keyless, no usage limits; CARTO keyless basemaps shut down 2026). */
+  window.addEventListener('load', function(){
+    var el=document.getElementById('map'); if(!el||!window.maplibregl) return;
+    var cfg=(window.CLIENT&&window.CLIENT.map)||{};
+    var center=cfg.center; if(!center||center.length!==2) return;   // no configured center → skip the map rather than default to a wrong place
+    var radius=cfg.radius||17000;
+    var cities=cfg.cities||[];
+    var accent=((C().brand&&C().brand.accent))||(window.CLIENT&&window.CLIENT.accent)||'#2563EB';
+    var lat=center[0], lng=center[1];
+    var dLat=radius/111320, dLng=radius/(111320*Math.cos(lat*Math.PI/180));
+    var map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/dark',center:[lng,lat],zoom:10,cooperativeGestures:true,attributionControl:{compact:true}});
+    map.addControl(new maplibregl.NavigationControl({showCompass:false}));
+    map.fitBounds([[lng-dLng,lat-dLat],[lng+dLng,lat+dLat]],{padding:34,duration:0});
+    map.on('load', function(){
+      var pts=[]; for(var i=0;i<=64;i++){var a=i/64*2*Math.PI; pts.push([lng+dLng*Math.cos(a), lat+dLat*Math.sin(a)]);}
+      map.addSource('ring',{type:'geojson',data:{type:'Feature',geometry:{type:'Polygon',coordinates:[pts]}}});
+      map.addLayer({id:'ring-fill',type:'fill',source:'ring',paint:{'fill-color':accent,'fill-opacity':.06}});
+      map.addLayer({id:'ring-line',type:'line',source:'ring',paint:{'line-color':accent,'line-width':1.5,'line-opacity':.9}});
+      cities.forEach(function(c){
+        var d=document.createElement('div');
+        d.style.cssText='width:9px;height:9px;border-radius:50%;background:'+accent+';border:1px solid #fff;cursor:default';
+        var pop=new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:10}).setText(c[0]);
+        d.addEventListener('mouseenter',function(){pop.setLngLat([c[2],c[1]]).addTo(map);});
+        d.addEventListener('mouseleave',function(){pop.remove();});
+        new maplibregl.Marker({element:d}).setLngLat([c[2],c[1]]).addTo(map);
+      });
+      map.setMinZoom(map.getZoom()-1);
+    });
+  });
+})();
+</script>
+</body>
+</html>
