@@ -38,8 +38,8 @@ window.DEFAULT_CONTENT = {
     owner: "Owner"
   },
   hero: {
-    headline: "Get yo shine on.",
-    em: "Right in your driveway.",
+    headline: "Get yo",
+    em: "Shine on",
     sub: "Mobile detailing for cars, trucks and SUVs — plus pressure washing for homes, rigs and lots. We bring the shop to you across the Memphis area.",
     mark: "Mobile detailing  ·  Pressure washing  ·  We come to you",
     photo: "./images/hero.jpg",
