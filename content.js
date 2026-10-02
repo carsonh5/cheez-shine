@@ -88,7 +88,7 @@ window.DEFAULT_CONTENT = {
   area: {
     lead: "Based in West Memphis and fully mobile across the greater Memphis area. Your driveway, your office lot, wherever the vehicle sits. Just outside the ring? Call us — we often still make it work.",
     // Service cities — DRAFT list; confirm his actual coverage on the call.
-    cities: ["Memphis", "West Memphis", "Germantown", "Collierville", "Bartlett", "Cordova", "Southaven"]
+    cities: ["Memphis", "West Memphis", "Germantown", "Bartlett", "Cordova", "Southaven"]
   },
   hours: "Mon–Sat 7:00a–7:00p · Sun closed.",
   social: { ig: "", fb: "https://www.facebook.com/61573396979642", yelp: "", nextdoor: "", igFeedOn: false },

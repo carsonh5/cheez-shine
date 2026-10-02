@@ -62,7 +62,6 @@ window.CLIENT = {
       ["Memphis", 35.1495, -90.0490],
       ["West Memphis", 35.1465, -90.1848],
       ["Germantown", 35.0867, -89.8101],
-      ["Collierville", 35.0420, -89.6645],
       ["Bartlett", 35.2045, -89.8740],
       ["Cordova", 35.1562, -89.7762],
       ["Southaven", 34.9890, -90.0126]
