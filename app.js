@@ -688,11 +688,16 @@ function applyHeroCrop() {
   const heroImg = document.querySelector('[data-field="hero.photo"]');
   if (!heroImg) return;
   const h = content.hero || {};
-  const x = h.photoPosX == null ? 60 : h.photoPosX, y = h.photoPosY == null ? 50 : h.photoPosY, z = h.photoZoom == null ? 100 : h.photoZoom;
+  // phone gets its own framing when photoPosXm/photoPosYm/photoZoomm are set
+  const mob = window.matchMedia("(max-width:760px)").matches;
+  const pick = (m, d, fb) => (mob && m != null) ? m : (d == null ? fb : d);
+  const x = pick(h.photoPosXm, h.photoPosX, 60), y = pick(h.photoPosYm, h.photoPosY, 50), z = pick(h.photoZoomm, h.photoZoom, 100);
   heroImg.style.objectPosition = x + "% " + y + "%";
   heroImg.style.transformOrigin = x + "% " + y + "%";
   heroImg.style.transform = z > 100 ? "scale(" + (z / 100) + ")" : "";
 }
+try { window.matchMedia("(max-width:760px)").addEventListener("change", applyHeroCrop); } catch (e) {}
+
 
 /* ---- hero reframe (crop) tool — sliders for pan + zoom, live preview ---- */
 function openHeroEditor() {

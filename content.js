@@ -43,7 +43,8 @@ window.DEFAULT_CONTENT = {
     sub: "Mobile detailing for cars, trucks and SUVs — plus pressure washing for homes, rigs and lots. We bring the shop to you across the Memphis area.",
     mark: "Mobile detailing  ·  Pressure washing  ·  We come to you",
     photo: "./images/hero.jpg",
-    photoPosX: 55, photoPosY: 55, photoZoom: 100
+    photoPosX: 33, photoPosY: 56, photoZoom: 100,
+    photoPosXm: 0, photoPosYm: 0, photoZoomm: 120
   },
   brand: { accent: "#E8A33D" },   // keep in sync with CLIENT.accent in client.config.js
   pricingLead: "Pick a package, add your vehicle and any extras, and your price updates as you go — no waiting on a callback. We text you to confirm the time and final price before we start.",
