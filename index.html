@@ -39,7 +39,7 @@
   "address": { "@type": "PostalAddress", "addressCountry": "US" }
 }
 </script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%230C0C0D'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='28' font-weight='800' fill='%232563EB' text-anchor='middle'%3E%E2%97%8F%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%230C0C0D'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='28' font-weight='800' fill='%23E8A33D' text-anchor='middle'%3E%E2%97%8F%3C/text%3E%3C/svg%3E" />
 <meta name="theme-color" content="#0C0C0D" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -525,7 +525,7 @@
     var center=cfg.center; if(!center||center.length!==2) return;   // no configured center → skip the map rather than default to a wrong place
     var radius=cfg.radius||17000;
     var cities=cfg.cities||[];
-    var accent=((C().brand&&C().brand.accent))||(window.CLIENT&&window.CLIENT.accent)||'#2563EB';
+    var accent=((C().brand&&C().brand.accent))||(window.CLIENT&&window.CLIENT.accent)||'#E8A33D';
     var lat=center[0], lng=center[1];
     var dLat=radius/111320, dLng=radius/(111320*Math.cos(lat*Math.PI/180));
     var map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/dark',center:[lng,lat],zoom:10,cooperativeGestures:true,attributionControl:{compact:true}});

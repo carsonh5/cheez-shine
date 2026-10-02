@@ -7,8 +7,8 @@
   --muted:#79797A;
   --line:#242427;
   --line-2:#33333A;
-  --accent:#2563EB;        /* placeholder — CLIENT.accent (client.config.js) overrides at runtime */
-  --accent-deep:#1D4FD7;   /* placeholder — app.js derives a darkened accent at runtime */
+  --accent:#E8A33D;        /* Cheez Shine gold — baked in so first paint matches (runtime still overrides from content) */
+  --accent-deep:#C38933;   /* shade(#E8A33D, -0.16) — matches app.js derivation */
   --disp:"Archivo",system-ui,sans-serif;
   --sans:"Hanken Grotesk",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,monospace;
