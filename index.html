@@ -33,7 +33,6 @@
   "image": "https://carsonh5.github.io/cheez-shine/images/hero.jpg",
   "url": "https://carsonh5.github.io/cheez-shine/",
   "telephone": "+15592608749",
-  "email": "owner@example.com",
   "priceRange": "$$",
   "description": "Instant pricing and easy online booking. We come to you.",
   "address": { "@type": "PostalAddress", "addressCountry": "US" }
@@ -53,7 +52,7 @@
 
 <header class="nav">
   <div class="shell nav-in">
-    <a class="logo" href="#top" data-field="business.name">Your&nbsp;<span data-field="business.nameSub">Business</span></a>
+    <a class="logo" href="#top" data-field="business.name">Cheez&nbsp;Shine&nbsp;<span data-field="business.nameSub">Mobile Detail</span></a>
     <nav class="nav-links">
       <a href="#pricing">Pricing</a>
       <a href="#work">Work</a>
@@ -68,7 +67,7 @@
   <img class="hero-img" data-field="hero.photo" src="./images/hero.jpg" alt="" />
   <div class="hero-veil"></div>
   <div class="shell hero-in">
-    <h1><span data-field="hero.headline">Showroom finish.</span><br><em data-field="hero.em">Your driveway.</em></h1>
+    <h1><span data-field="hero.headline">Get yo shine on.</span><br><em data-field="hero.em">Your driveway.</em></h1>
     <p class="hero-sub" data-field="hero.sub">Interior and exterior detailing for cars, trucks, boats and RVs — done at your home or office across the metro.</p>
     <div class="hero-act">
       <a class="btn" href="#pricing">Build your quote</a>
@@ -85,7 +84,7 @@
     <div class="sec-head">
       <p class="over">Pricing</p>
       <h2>Instant pricing. No surprises.</h2>
-      <p class="sec-lead" data-field="pricingLead">Pick a package, add your vehicle and any extras, and your price updates as you go — no waiting on a callback. We confirm the final number after a couple of quick photos.</p>
+      <p class="sec-lead" data-field="pricingLead">Pick a package, add your vehicle and any extras, and your price updates as you go — no waiting on a callback. We text you to confirm the time and final price before we start.</p>
     </div>
 
     <form id="quote">
@@ -108,7 +107,7 @@
           <p class="est-num" id="est">$—</p>
           <p class="est-note" id="estNote">Pick a package to start.</p>
           <button type="button" class="btn btn-block" id="bookBtn">Book this detail</button>
-          <p class="est-fine">Have a boat, RV or motorcycle? Add a photo when you book and we'll confirm your price. Final price confirmed after a couple of photos.</p>
+          <p class="est-fine">Have a boat, RV or motorcycle? Add a photo when you book (optional) and we'll confirm your price by text.</p>
         </aside>
       </div>
     </form>
@@ -152,7 +151,8 @@
       <p class="sec-lead" data-field="area.lead">Fully mobile across the metro.</p>
       <ul class="area-cities" id="areaCities"></ul>
     </div>
-    <div class="area-map"><div id="map" aria-label="Map of the service area"></div></div>
+    <div class="area-map"><div id="map" aria-label="Service area map" aria-label="Map of the service area"></div>
+      <p class="map-credit">Map data &copy; OpenStreetMap contributors &middot; OpenFreeMap</p></div>
   </div>
 </section>
 
@@ -179,7 +179,7 @@
 <footer class="foot">
   <div class="shell foot-in">
     <div>
-      <a class="logo" href="#top" data-field="business.name">Your&nbsp;<span data-field="business.nameSub">Business</span></a>
+      <a class="logo" href="#top" data-field="business.name">Cheez&nbsp;Shine&nbsp;<span data-field="business.nameSub">Mobile Detail</span></a>
       <p class="foot-note">Mobile auto, boat, RV &amp; motorcycle detailing. We come to you.</p>
     </div>
     <div class="foot-col">
@@ -322,7 +322,7 @@
       html='<div class="bk-sum-row"><span>'+q.pkg+(q.veh?' · '+q.veh:'')+'</span><b>'+money(q.total)+'</b></div>';
       var paid=q.extras.filter(function(x){return !x.included;});
       if(paid.length) html+='<div class="bk-sum-add">+ '+paid.map(function(x){return x.name;}).join(', ')+'</div>';
-      html+='<div class="bk-sum-fine">Estimate — final price confirmed after a couple of photos.</div>';
+      html+='<div class="bk-sum-fine">Estimate — we text you to confirm the final price before we start.</div>';
     } else { html='<div class="bk-sum-row"><span>Custom detail</span><b>Quote by text</b></div>'; }
     summary.innerHTML=html; stepDone.hidden=true; stepForm.hidden=false;
     bk.classList.add('on'); bk.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
@@ -528,8 +528,7 @@
     var accent=((C().brand&&C().brand.accent))||(window.CLIENT&&window.CLIENT.accent)||'#E8A33D';
     var lat=center[0], lng=center[1];
     var dLat=radius/111320, dLng=radius/(111320*Math.cos(lat*Math.PI/180));
-    var map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/dark',center:[lng,lat],zoom:10,cooperativeGestures:true,attributionControl:{compact:true}});
-    map.addControl(new maplibregl.NavigationControl({showCompass:false}));
+    var map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/dark',center:[lng,lat],zoom:10,cooperativeGestures:true,attributionControl:false});
     map.fitBounds([[lng-dLng,lat-dLat],[lng+dLng,lat+dLat]],{padding:34,duration:0});
     map.on('load', function(){
       var pts=[]; for(var i=0;i<=64;i++){var a=i/64*2*Math.PI; pts.push([lng+dLng*Math.cos(a), lat+dLat*Math.sin(a)]);}

@@ -81,7 +81,7 @@ h1,h2{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;line-height:
 .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .seg label{cursor:pointer;min-width:0}
 .seg input{position:absolute;opacity:0;width:0;height:0}
-.seg label>span{display:flex;align-items:center;justify-content:center;gap:5px;height:48px;border:1px solid var(--line-2);border-radius:2px;font-family:var(--mono);font-weight:500;font-size:.82rem;letter-spacing:.02em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);transition:border-color .16s ease,background-color .16s ease,color .16s ease}
+.seg label>span{display:flex;align-items:center;justify-content:center;gap:5px;min-height:48px;height:auto;padding:6px;border:1px solid var(--line-2);border-radius:2px;font-family:var(--mono);font-weight:500;font-size:.82rem;letter-spacing:.02em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);transition:border-color .16s ease,background-color .16s ease,color .16s ease}
 .seg label:hover>span{border-color:var(--muted);color:var(--ink)}
 .seg input:checked + span{background:var(--ink);color:#0C0C0D;border-color:var(--ink)}
 .seg input:checked + span b{color:#0C0C0D}
@@ -212,7 +212,7 @@ h1,h2{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;line-height:
 .bk-input::placeholder{color:var(--muted)}
 .seg-3{grid-template-columns:repeat(3,1fr)}
 .seg-wrap{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}
-.seg label>span{padding:0 6px;font-size:.76rem;letter-spacing:.01em;line-height:1.12;text-align:center}
+.seg label>span{padding:6px;font-size:.76rem;letter-spacing:.01em;line-height:1.12;text-align:center}
 .seg input:disabled + span{opacity:.3;cursor:not-allowed;text-decoration:line-through}
 textarea.bk-input{resize:vertical;min-height:64px;font-family:inherit}
 .bk-file{display:flex;align-items:center;gap:12px;cursor:pointer}
@@ -263,3 +263,13 @@ textarea.bk-input{resize:vertical;min-height:64px;font-family:inherit}
   .hero{align-items:flex-start;min-height:auto}
   .hero-in{padding-block:44px 56px}
 }
+
+/* Booking modal on phones: stack fields; date input can't overflow */
+.bk-input{min-width:0}
+input[type="date"].bk-input{appearance:none;-webkit-appearance:none;display:block}
+@media (max-width:480px){
+  .modal-card .seg-3{grid-template-columns:1fr}
+  .bk-grid{grid-template-columns:1fr;gap:0}
+}
+/* Map credit (replaces the on-map attribution control) */
+.map-credit{font-size:.68rem;color:var(--muted);font-family:var(--mono);margin:8px 0 0;letter-spacing:.02em}

@@ -46,7 +46,7 @@ window.DEFAULT_CONTENT = {
     photoPosX: 55, photoPosY: 55, photoZoom: 100
   },
   brand: { accent: "#E8A33D" },   // keep in sync with CLIENT.accent in client.config.js
-  pricingLead: "Pick a package, add your vehicle and any extras, and your price updates as you go — no waiting on a callback. We confirm the final number after a couple of quick photos.",
+  pricingLead: "Pick a package, add your vehicle and any extras, and your price updates as you go — no waiting on a callback. We text you to confirm the time and final price before we start.",
   // DRAFT PRICING — Memphis-market rates for a mobile detailer. Confirm with owner before launch.
   packages: [
     { id: "basic", name: "Maintenance Wash", price: 75, desc: "", list: ["Exterior hand wash & dry", "Wheels & tires cleaned and dressed", "Windows in & out", "Quick interior vacuum & wipe-down"] },
