@@ -527,6 +527,14 @@
     var cities=cfg.cities||[];
     var accent=((C().brand&&C().brand.accent))||(window.CLIENT&&window.CLIENT.accent)||'#E8A33D';
     var lat=center[0], lng=center[1];
+    if(cities.length){ // auto-fit: ring derives from the city pins so it always encloses them
+      var lats=cities.map(function(c){return c[1];}), lngs=cities.map(function(c){return c[2];});
+      lat=(Math.min.apply(null,lats)+Math.max.apply(null,lats))/2;
+      lng=(Math.min.apply(null,lngs)+Math.max.apply(null,lngs))/2;
+      var kx=111320*Math.cos(lat*Math.PI/180), ky=111320;
+      radius=Math.max(8000, 1.18*Math.max.apply(null, cities.map(function(c){
+        var dx=(c[2]-lng)*kx, dy=(c[1]-lat)*ky; return Math.sqrt(dx*dx+dy*dy);})));
+    }
     var dLat=radius/111320, dLng=radius/(111320*Math.cos(lat*Math.PI/180));
     var map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/dark',center:[lng,lat],zoom:10,cooperativeGestures:true,attributionControl:false});
     map.fitBounds([[lng-dLng,lat-dLat],[lng+dLng,lat+dLat]],{padding:34,duration:0});
